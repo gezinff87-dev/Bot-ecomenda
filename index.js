@@ -51,7 +51,7 @@ const customEmojis = {
     error: "<a:TickRed:1435866005942566962>",
     success: "<a:TickGreen:1435865654770274367>",
     money: "<:k0111:1410699501425131540>",
-    card: "💳",
+    card: "<:irud:1433963783201751172>",
     hourglass: "<a:loading:1435863836606468177>",
     party: "<a:celebration1:1436054927179907106>",
     package: "<:ei_1755968898883removebgpreview:1408861559056371732>",
@@ -65,7 +65,6 @@ const customEmojis = {
     checkmark: "✔️",
     arrowLeft: "⬅️",
     arrowRight: "➡️"
-    pix: "<:irud:1433963783201751172>",
 };
 
 const channelPaymentStatus = new Map();
@@ -802,7 +801,7 @@ client.on('interactionCreate', async (interaction) => {
             }
 
             const paymentEmbed = new EmbedBuilder()
-                .setTitle(`<:irud:1433963783201751172> Informações de Pagamento`)
+                .setTitle(`${customEmojis.card} Informações de Pagamento`)
                 .setDescription("Utilize a chave PIX abaixo para realizar o pagamento da sua encomenda:")
                 .setColor(0x00B894)
                 .addFields(
