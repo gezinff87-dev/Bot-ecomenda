@@ -52,7 +52,7 @@ const customEmojis = {
     package: "📦",
     settings: "⚙️",
     worker: "👷",
-    bell: "<:emoji_20:1423707485629317332>",
+    bell: "🔔",
     progressFilled: "🟩",
     progressEmpty: "⬜",
     pin: "📍",
@@ -344,10 +344,50 @@ client.on('interactionCreate', async (interaction) => {
 
                 return interaction.reply({ content: "Encomenda finalizada com sucesso!", ephemeral: true });
             } else if (interaction.customId === "status_cancel") {
-                await interaction.reply({ content: "Encomenda cancelada. O canal será excluído.", ephemeral: true });
+                const messages = await channel.messages.fetch({ limit: 100 });
+                const orderMessage = messages.find(m => 
+                    m.author.id === client.user.id &&
+                    m.embeds.length > 0 &&
+                    m.embeds[0].title === "Nova Encomenda Recebida"
+                );
+                
+                let userId = null;
+                if (orderMessage) {
+                    const userField = orderMessage.embeds[0].fields.find(f => f.name === "Usuário");
+                    if (userField) {
+                        const match = userField.value.match(/\((\d+)\)$/);
+                        if (match) userId = match[1];
+                    }
+                }
+
+                const cancelEmbed = new EmbedBuilder()
+                    .setTitle(`${customEmojis.error} Encomenda Cancelada`)
+                    .setDescription("Infelizmente, sua encomenda foi cancelada pela equipe de suporte.")
+                    .setColor(0xE74C3C)
+                    .addFields(
+                        { name: "Motivo", value: "Cancelada pelo suporte", inline: false },
+                        { name: "Data do Cancelamento", value: new Date().toLocaleString(), inline: false }
+                    );
+
+                await channel.send({ 
+                    content: userId ? `<@${userId}>` : "@here",
+                    embeds: [cancelEmbed] 
+                });
+
+                if (userId) {
+                    try {
+                        const user = await client.users.fetch(userId);
+                        await user.send(`${customEmojis.error} **Encomenda Cancelada**\n\nSua encomenda foi cancelada pela equipe de suporte. Para mais informações, entre em contato com a equipe.`);
+                    } catch (err) {
+                        console.error("Erro ao enviar DM para o usuário:", err);
+                    }
+                }
+
+                await interaction.reply({ content: "Encomenda cancelada. O cliente foi notificado. O canal será excluído.", ephemeral: true });
+                
                 return setTimeout(async () => {
                     await channel.delete().catch(console.error);
-                }, 3000);
+                }, 5000);
             }
         }
 
