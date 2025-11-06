@@ -162,6 +162,13 @@ client.on('interactionCreate', async (interaction) => {
         const { commandName } = interaction;
 
         if (commandName === 'encomenda') {
+            if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
+                return interaction.reply({ 
+                    content: `${customEmojis.error} Você não tem permissão para usar este comando.`, 
+                    ephemeral: true 
+                });
+            }
+
             const orderEmbed = new EmbedBuilder()
                 .setTitle("Sistema de Encomendas")
                 .setDescription("Utilize este sistema para fazer sua encomenda. Clique em **Fazer Encomenda** para iniciar e preencha os dados necessários.")
