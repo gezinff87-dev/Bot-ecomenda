@@ -172,7 +172,7 @@ client.on('interactionCreate', async (interaction) => {
             const orderEmbed = new EmbedBuilder()
                 .setTitle("Sistema de Encomendas")
                 .setDescription("Utilize este sistema para fazer sua encomenda. Clique em **Fazer Encomenda** para iniciar e preencha os dados necessários.")
-                .setColor(0x00AE86);
+                .setColor(0x2ECC71);
 
             const orderButton = new ButtonBuilder()
                 .setCustomId("order_button")
