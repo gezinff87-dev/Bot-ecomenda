@@ -65,6 +65,7 @@ const customEmojis = {
     checkmark: "✔️",
     arrowLeft: "⬅️",
     arrowRight: "➡️"
+    pix: "<:irud:1433963783201751172>",
 };
 
 const channelPaymentStatus = new Map();
