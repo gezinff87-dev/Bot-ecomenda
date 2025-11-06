@@ -42,6 +42,26 @@ let config = {
     pixKey: null
 };
 
+const customEmojis = {
+    error: "<:erro:0>",
+    success: "<:sucesso:0>",
+    money: "<:dinheiro:0>",
+    card: "<:cartao:0>",
+    hourglass: "<:ampulheta:0>",
+    party: "<:festa:0>",
+    package: "<:pacote:0>",
+    settings: "<:config:0>",
+    worker: "<:trabalhador:0>",
+    bell: "<:sino:0>",
+    progressFilled: "<:progresso_cheio:0>",
+    progressEmpty: "<:progresso_vazio:0>",
+    pin: "<:pin:0>",
+    yellow: "<:amarelo:0>",
+    checkmark: "<:check:0>",
+    arrowLeft: "<:seta_esquerda:0>",
+    arrowRight: "<:seta_direita:0>"
+};
+
 const channelPaymentStatus = new Map();
 
 function loadConfig() {
@@ -136,7 +156,7 @@ client.on('messageCreate', async (message) => {
         const currentPixKey = config.pixKey || "Nenhuma chave configurada";
         
         const pixEmbed = new EmbedBuilder()
-            .setTitle("⚙️ Configuração de Chave PIX")
+            .setTitle(`${customEmojis.settings} Configuração de Chave PIX`)
             .setDescription("Configure a chave PIX que será exibida aos clientes no momento do pagamento.")
             .setColor(0x9B59B6)
             .addFields({ name: "Chave Atual", value: `\`${currentPixKey}\``, inline: false });
@@ -148,11 +168,73 @@ client.on('messageCreate', async (message) => {
                 new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
                         .setCustomId("open_config_pix")
-                        .setLabel("⚙️ Configurar PIX")
+                        .setLabel(`${customEmojis.settings} Configurar PIX`)
                         .setStyle(ButtonStyle.Primary)
                 )
             ]
         });
+    }
+
+    if(message.content.toLowerCase() === '!logs'){
+        const channel = message.channel;
+        if(!channel || !channel.name) return;
+
+        if(!channel.name.includes('encomenda') && !channel.name.includes('producao') && !channel.name.includes('finalizado')){
+            return message.channel.send("Este comando só pode ser usado em canais de encomenda.");
+        }
+
+        try {
+            const messages = await channel.messages.fetch({ limit: 100 });
+            const logs = messages.reverse().map(msg => {
+                const timestamp = msg.createdAt.toLocaleString('pt-BR');
+                const author = msg.author.tag;
+                const content = msg.content || '[Embed/Anexo]';
+                return `[${timestamp}] ${author}: ${content}`;
+            }).join('\n');
+
+            const logEmbed = new EmbedBuilder()
+                .setTitle(`${customEmojis.pin} Logs do Canal`)
+                .setDescription(`\`\`\`${logs.substring(0, 4000)}\`\`\``)
+                .setColor(0x3498DB)
+                .setFooter({ text: `Total de mensagens: ${messages.size}` });
+
+            return message.channel.send({ embeds: [logEmbed] });
+        } catch (error) {
+            console.error("Erro ao buscar logs:", error);
+            return message.channel.send("Erro ao buscar os logs do canal.");
+        }
+    }
+
+    if(message.content.toLowerCase() === '!close'){
+        if (!message.member || !message.member.roles.cache.has(config.supportRoleId)) {
+            return message.channel.send("Você não tem permissão para fechar canais.");
+        }
+
+        const channel = message.channel;
+        if(!channel || !channel.name) return;
+
+        if(!channel.name.includes('encomenda') && !channel.name.includes('producao') && !channel.name.includes('finalizado')){
+            return message.channel.send("Este comando só pode ser usado em canais de encomenda.");
+        }
+
+        const confirmEmbed = new EmbedBuilder()
+            .setTitle(`${customEmojis.error} Confirmar Fechamento`)
+            .setDescription("Tem certeza que deseja fechar este canal? Esta ação não pode ser desfeita.")
+            .setColor(0xE74C3C);
+
+        const confirmButton = new ButtonBuilder()
+            .setCustomId("confirm_close_channel")
+            .setLabel(`${customEmojis.checkmark} Confirmar`)
+            .setStyle(ButtonStyle.Danger);
+
+        const cancelButton = new ButtonBuilder()
+            .setCustomId("cancel_close_channel")
+            .setLabel(`${customEmojis.error} Cancelar`)
+            .setStyle(ButtonStyle.Secondary);
+
+        const row = new ActionRowBuilder().addComponents(confirmButton, cancelButton);
+
+        return message.channel.send({ embeds: [confirmEmbed], components: [row] });
     }
 
 });
@@ -239,7 +321,7 @@ client.on('interactionCreate', async (interaction) => {
                 await channel.setName(newName);
 
                 const readyEmbed = new EmbedBuilder()
-                    .setTitle("✅ Encomenda Pronta!")
+                    .setTitle(`${customEmojis.success} Encomenda Pronta!`)
                     .setDescription(`Sua encomenda foi finalizada e está pronta para entrega!`)
                     .setColor(0x2ECC71)
                     .addFields(
@@ -249,7 +331,7 @@ client.on('interactionCreate', async (interaction) => {
 
                 const payButton = new ButtonBuilder()
                     .setCustomId("pagar_encomenda")
-                    .setLabel("💰 Pagar Encomenda")
+                    .setLabel(`${customEmojis.money} Pagar Encomenda`)
                     .setStyle(ButtonStyle.Success);
                 
                 const payRow = new ActionRowBuilder().addComponents(payButton);
@@ -281,24 +363,24 @@ client.on('interactionCreate', async (interaction) => {
             
             const assumirButton = new ButtonBuilder()
                 .setCustomId("assumir_producao")
-                .setLabel("👷 Assumir Produção")
+                .setLabel(`${customEmojis.worker} Assumir Produção`)
                 .setStyle(ButtonStyle.Primary);
             const desistirButton = new ButtonBuilder()
                 .setCustomId("desistir_producao")
-                .setLabel("❌ Desistir da Produção")
+                .setLabel(`${customEmojis.error} Desistir da Produção`)
                 .setStyle(ButtonStyle.Secondary);
             
             const notifyButton = new ButtonBuilder()
                 .setCustomId("notify_client")
-                .setLabel("🔔 Notificar Cliente")
+                .setLabel(`${customEmojis.bell} Notificar Cliente`)
                 .setStyle(ButtonStyle.Success);
             const progressDecrease = new ButtonBuilder()
                 .setCustomId("progress_decrease")
-                .setLabel("⬅")
+                .setLabel(`${customEmojis.arrowLeft}`)
                 .setStyle(ButtonStyle.Secondary);
             const progressIncrease = new ButtonBuilder()
                 .setCustomId("progress_increase")
-                .setLabel("➡")
+                .setLabel(`${customEmojis.arrowRight}`)
                 .setStyle(ButtonStyle.Secondary);
             
             const optionsRow = new ActionRowBuilder().addComponents(assumirButton, desistirButton, notifyButton);
@@ -493,13 +575,13 @@ client.on('interactionCreate', async (interaction) => {
         else if (interaction.customId === "pagar_encomenda") {
             if (!config.pixKey) {
                 return interaction.reply({ 
-                    content: "❌ Chave PIX não configurada! O administrador precisa usar o comando `!configpix` primeiro.", 
+                    content: `${customEmojis.error} Chave PIX não configurada! O administrador precisa usar o comando \`!configpix\` primeiro.`, 
                     ephemeral: true 
                 });
             }
 
             const paymentEmbed = new EmbedBuilder()
-                .setTitle("💰 Informações de Pagamento")
+                .setTitle(`${customEmojis.money} Informações de Pagamento`)
                 .setDescription("Utilize a chave PIX abaixo para realizar o pagamento da sua encomenda:")
                 .setColor(0x00B894)
                 .addFields(
@@ -516,24 +598,24 @@ client.on('interactionCreate', async (interaction) => {
             setTimeout(async () => {
                 try {
                     const paymentConfirmEmbed = new EmbedBuilder()
-                        .setTitle("💳 Aguardando Confirmação de Pagamento")
+                        .setTitle(`${customEmojis.card} Aguardando Confirmação de Pagamento`)
                         .setDescription("O cliente solicitou o pagamento. Por favor, confirme quando o pagamento for verificado.")
                         .setColor(0xF39C12)
                         .addFields(
                             { name: "Cliente", value: `<@${userId}>`, inline: true },
                             { name: "Data/Hora", value: new Date().toLocaleString(), inline: true },
-                            { name: "Status", value: "⏳ Aguardando confirmação do suporte", inline: false }
+                            { name: "Status", value: `${customEmojis.hourglass} Aguardando confirmação do suporte`, inline: false }
                         )
                         .setFooter({ text: "Apenas o suporte pode confirmar o pagamento" });
 
                     const confirmPaymentButton = new ButtonBuilder()
                         .setCustomId("confirmar_pagamento")
-                        .setLabel("✅ Confirmar Pagamento")
+                        .setLabel(`${customEmojis.success} Confirmar Pagamento`)
                         .setStyle(ButtonStyle.Success);
 
                     const rejectPaymentButton = new ButtonBuilder()
                         .setCustomId("rejeitar_pagamento")
-                        .setLabel("❌ Rejeitar Pagamento")
+                        .setLabel(`${customEmojis.error} Rejeitar Pagamento`)
                         .setStyle(ButtonStyle.Danger);
 
                     const confirmRow = new ActionRowBuilder().addComponents(confirmPaymentButton, rejectPaymentButton);
@@ -551,7 +633,7 @@ client.on('interactionCreate', async (interaction) => {
 
         else if (interaction.customId === "confirmar_pagamento") {
             if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
-                return interaction.reply({ content: "❌ Você não tem permissão para confirmar pagamentos.", ephemeral: true });
+                return interaction.reply({ content: `${customEmojis.error} Você não tem permissão para confirmar pagamentos.`, ephemeral: true });
             }
 
             const channel = interaction.channel;
@@ -577,12 +659,12 @@ client.on('interactionCreate', async (interaction) => {
                 }
 
                 const deliveryEmbed = new EmbedBuilder()
-                    .setTitle("✅ Compra Aprovada!")
-                    .setDescription("**Parabéns!** Seu pagamento foi confirmado com sucesso.\n\n🎉 Aguarde a entrega do produto neste canal ou no seu PV (mensagem privada).")
+                    .setTitle(`${customEmojis.success} Compra Aprovada!`)
+                    .setDescription(`**Parabéns!** Seu pagamento foi confirmado com sucesso.\n\n${customEmojis.party} Aguarde a entrega do produto neste canal ou no seu PV (mensagem privada).`)
                     .setColor(0x2ECC71)
                     .addFields(
-                        { name: "Status", value: "✅ Pagamento Confirmado", inline: true },
-                        { name: "Próximo Passo", value: "📦 Aguardando Entrega", inline: true },
+                        { name: "Status", value: `${customEmojis.success} Pagamento Confirmado`, inline: true },
+                        { name: "Próximo Passo", value: `${customEmojis.package} Aguardando Entrega`, inline: true },
                         { name: "Data de Aprovação", value: new Date().toLocaleString(), inline: false }
                     )
                     .setFooter({ text: "Você será notificado assim que o produto for entregue" });
@@ -595,7 +677,7 @@ client.on('interactionCreate', async (interaction) => {
                 if (userId) {
                     try {
                         const user = await client.users.fetch(userId);
-                        await user.send("✅ **Compra Aprovada!** Seu pagamento foi confirmado. Aguarde a entrega do produto neste canal ou no seu PV.");
+                        await user.send(`${customEmojis.success} **Compra Aprovada!** Seu pagamento foi confirmado. Aguarde a entrega do produto neste canal ou no seu PV.`);
                     } catch (err) {
                         console.error("Erro ao enviar DM para o usuário:", err);
                     }
@@ -603,17 +685,17 @@ client.on('interactionCreate', async (interaction) => {
 
                 channelPaymentStatus.set(channel.id, { status: 'payment_confirmed', userId: userId });
 
-                await interaction.editReply({ content: "✅ Pagamento confirmado com sucesso! Todas as mensagens anteriores foram removidas." });
+                await interaction.editReply({ content: `${customEmojis.success} Pagamento confirmado com sucesso! Todas as mensagens anteriores foram removidas.` });
 
             } catch (error) {
                 console.error("Erro ao confirmar pagamento:", error);
-                await interaction.editReply({ content: "❌ Ocorreu um erro ao processar a confirmação." });
+                await interaction.editReply({ content: `${customEmojis.error} Ocorreu um erro ao processar a confirmação.` });
             }
         }
 
         else if (interaction.customId === "rejeitar_pagamento") {
             if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
-                return interaction.reply({ content: "❌ Você não tem permissão para rejeitar pagamentos.", ephemeral: true });
+                return interaction.reply({ content: `${customEmojis.error} Você não tem permissão para rejeitar pagamentos.`, ephemeral: true });
             }
 
             const channel = interaction.channel;
@@ -623,7 +705,7 @@ client.on('interactionCreate', async (interaction) => {
             const userId = channelData?.userId || null;
 
             const rejectEmbed = new EmbedBuilder()
-                .setTitle("❌ Pagamento Rejeitado")
+                .setTitle(`${customEmojis.error} Pagamento Rejeitado`)
                 .setDescription("O comprovante enviado foi rejeitado pela equipe de suporte. Por favor, verifique os dados e tente novamente.")
                 .setColor(0xE74C3C)
                 .addFields(
@@ -631,13 +713,44 @@ client.on('interactionCreate', async (interaction) => {
                     { name: "Próximos Passos", value: "Realize o pagamento correto e envie um novo comprovante", inline: false }
                 );
 
-            await channel.send({ embeds: [rejectEmbed] });
+            const rejectMessage = await channel.send({ embeds: [rejectEmbed] });
+
+            setTimeout(async () => {
+                try {
+                    await rejectMessage.delete();
+                } catch (error) {
+                    console.error("Erro ao deletar mensagem de rejeição:", error);
+                }
+            }, 10000);
 
             if (userId) {
                 channelPaymentStatus.set(channel.id, { status: 'awaiting_proof', userId: userId });
             }
 
             return interaction.reply({ content: "Pagamento rejeitado. O cliente foi notificado.", ephemeral: true });
+        }
+
+        else if (interaction.customId === "confirm_close_channel") {
+            if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
+                return interaction.reply({ content: "Você não tem permissão para fechar canais.", ephemeral: true });
+            }
+
+            const channel = interaction.channel;
+            if (!channel) return;
+
+            await interaction.reply({ content: `${customEmojis.checkmark} Canal será fechado em 3 segundos...`, ephemeral: true });
+
+            setTimeout(async () => {
+                try {
+                    await channel.delete();
+                } catch (error) {
+                    console.error("Erro ao deletar canal:", error);
+                }
+            }, 3000);
+        }
+
+        else if (interaction.customId === "cancel_close_channel") {
+            return interaction.reply({ content: "Fechamento cancelado.", ephemeral: true });
         }
     }
 
@@ -758,18 +871,18 @@ client.on('interactionCreate', async (interaction) => {
 
                 const opcoesButton = new ButtonBuilder()
                     .setCustomId("opcoes")
-                    .setLabel("➕ Opções")
+                    .setLabel("Opções")
                     .setStyle(ButtonStyle.Secondary);
 
                 const updateStatusButton = new ButtonBuilder()
                     .setCustomId("update_status")
-                    .setLabel("📍 Atualizar Status")
+                    .setLabel(`${customEmojis.pin} Atualizar Status`)
                     .setDisabled(true)
                     .setStyle(ButtonStyle.Secondary);
                 const optionsRow = new ActionRowBuilder().addComponents(opcoesButton, updateStatusButton);
                 
                 await channel.send({ 
-                    content: `🔔 Nova encomenda criada! <@&${config.supportRoleId}> pode atender?`, 
+                    content: `${customEmojis.bell} Nova encomenda criada! <@&${config.supportRoleId}> pode atender?`, 
                     embeds: [confirmEmbed],
                     components: [statusRow, optionsRow]
                 });
@@ -794,7 +907,7 @@ client.on('interactionCreate', async (interaction) => {
             saveConfig();
 
             const successEmbed = new EmbedBuilder()
-                .setTitle("✅ Chave PIX Configurada")
+                .setTitle(`${customEmojis.success} Chave PIX Configurada`)
                 .setDescription("A chave PIX foi configurada com sucesso e salva permanentemente!")
                 .setColor(0x2ECC71)
                 .addFields(
@@ -811,7 +924,7 @@ function generateProgressBar(progress) {
     const totalBlocks = 10;
     const filledBlocks = Math.floor((progress / 100) * totalBlocks);
     const emptyBlocks = totalBlocks - filledBlocks;
-    return `[${"🟩".repeat(filledBlocks)}${"⬜".repeat(emptyBlocks)}] ${progress}%`;
+    return `[${customEmojis.progressFilled.repeat(filledBlocks)}${customEmojis.progressEmpty.repeat(emptyBlocks)}] ${progress}%`;
 }
 
 function updateProgressField(embed, progressBar, progress) {
