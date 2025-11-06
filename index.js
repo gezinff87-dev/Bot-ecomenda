@@ -43,23 +43,23 @@ let config = {
 };
 
 const customEmojis = {
-    error: "<:erro:0>",
-    success: "<:sucesso:0>",
-    money: "<:dinheiro:0>",
-    card: "<:cartao:0>",
-    hourglass: "<:ampulheta:0>",
-    party: "<:festa:0>",
-    package: "<:pacote:0>",
-    settings: "<:config:0>",
-    worker: "<:trabalhador:0>",
-    bell: "<:sino:0>",
-    progressFilled: "<:progresso_cheio:0>",
-    progressEmpty: "<:progresso_vazio:0>",
-    pin: "<:pin:0>",
-    yellow: "<:amarelo:0>",
-    checkmark: "<:check:0>",
-    arrowLeft: "<:seta_esquerda:0>",
-    arrowRight: "<:seta_direita:0>"
+    error: "❌",
+    success: "✅",
+    money: "💰",
+    card: "💳",
+    hourglass: "⏳",
+    party: "🎉",
+    package: "📦",
+    settings: "⚙️",
+    worker: "👷",
+    bell: "<:emoji_20\:1423707485629317332>",
+    progressFilled: "🟩",
+    progressEmpty: "⬜",
+    pin: "📍",
+    yellow: "🟡",
+    checkmark: "✔️",
+    arrowLeft: "⬅️",
+    arrowRight: "➡️"
 };
 
 const channelPaymentStatus = new Map();
