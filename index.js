@@ -39,16 +39,18 @@ const CONFIG_FILE = path.join(__dirname, 'config.json');
 let config = {
     orderCategoryId: "1417986273020219442",
     supportRoleId: "1435758114002567258",
-    pixKey: null
+    pixKey: null,
+    openOrdersLogChannel: null,
+    closedOrdersLogChannel: null
 };
 
 const customEmojis = {
-    error: "<a:TickRed:1435866005942566962>",
-    success: "<a:TickGreen:1435865654770274367>",
+    error: "❌",
+    success: "✅",
     money: "💰",
     card: "💳",
-    hourglass: "<a:loading:1435863836606468177>",
-    party: "<a:celebration1:1436054927179907106>",
+    hourglass: "⏳",
+    party: "🎉",
     package: "📦",
     settings: "⚙️",
     worker: "👷",
@@ -128,6 +130,12 @@ client.on('messageCreate', async (message) => {
     }
 
     if(message.content.toLowerCase() === "!listar"){
+        if (!message.member || !message.member.roles.cache.has(config.supportRoleId)) {
+            return message.reply("Você não tem permissão para listar encomendas.").then(msg => {
+                setTimeout(() => msg.delete().catch(() => {}), 5000);
+            }).catch(() => {});
+        }
+
         const guild = message.guild;
         if(!guild) return;
         
@@ -151,7 +159,9 @@ client.on('messageCreate', async (message) => {
 
     if(message.content.toLowerCase() === '!configpix'){
         if (!message.member || !message.member.roles.cache.has(config.supportRoleId)) {
-            return message.channel.send("Você não tem permissão para configurar a chave PIX.");
+            return message.reply("Você não tem permissão para configurar a chave PIX.").then(msg => {
+                setTimeout(() => msg.delete().catch(() => {}), 5000);
+            }).catch(() => {});
         }
 
         const currentPixKey = config.pixKey || "Nenhuma chave configurada";
@@ -178,38 +188,47 @@ client.on('messageCreate', async (message) => {
     }
 
     if(message.content.toLowerCase() === '!logs'){
-        const channel = message.channel;
-        if(!channel || !channel.name) return;
-
-        if(!channel.name.includes('encomenda') && !channel.name.includes('producao') && !channel.name.includes('finalizado')){
-            return message.channel.send("Este comando só pode ser usado em canais de encomenda.");
+        if (!message.member || !message.member.roles.cache.has(config.supportRoleId)) {
+            return message.reply("Você não tem permissão para configurar canais de logs.").then(msg => {
+                setTimeout(() => msg.delete().catch(() => {}), 5000);
+            }).catch(() => {});
         }
 
-        try {
-            const messages = await channel.messages.fetch({ limit: 100 });
-            const logs = messages.reverse().map(msg => {
-                const timestamp = msg.createdAt.toLocaleString('pt-BR');
-                const author = msg.author.tag;
-                const content = msg.content || '[Embed/Anexo]';
-                return `[${timestamp}] ${author}: ${content}`;
-            }).join('\n');
+        const guild = message.guild;
+        if (!guild) return;
 
-            const logEmbed = new EmbedBuilder()
-                .setTitle(`${customEmojis.pin} Logs do Canal`)
-                .setDescription(`\`\`\`${logs.substring(0, 4000)}\`\`\``)
-                .setColor(0x3498DB)
-                .setFooter({ text: `Total de mensagens: ${messages.size}` });
+        const logsEmbed = new EmbedBuilder()
+            .setTitle(`${customEmojis.settings} Configuração de Canais de Logs`)
+            .setDescription("Configure os canais onde serão registrados os logs de encomendas abertas e fechadas.")
+            .setColor(0x9B59B6)
+            .addFields(
+                { name: "Canal de Encomendas Abertas", value: config.openOrdersLogChannel ? `<#${config.openOrdersLogChannel}>` : "Não configurado", inline: true },
+                { name: "Canal de Encomendas Fechadas", value: config.closedOrdersLogChannel ? `<#${config.closedOrdersLogChannel}>` : "Não configurado", inline: true }
+            )
+            .setFooter({ text: "Clique nos botões abaixo para configurar" });
 
-            return message.channel.send({ embeds: [logEmbed] });
-        } catch (error) {
-            console.error("Erro ao buscar logs:", error);
-            return message.channel.send("Erro ao buscar os logs do canal.");
-        }
+        const openLogsButton = new ButtonBuilder()
+            .setCustomId("config_open_logs")
+            .setLabel("Configurar Canal Abertas")
+            .setEmoji(customEmojis.settings)
+            .setStyle(ButtonStyle.Primary);
+
+        const closedLogsButton = new ButtonBuilder()
+            .setCustomId("config_closed_logs")
+            .setLabel("Configurar Canal Fechadas")
+            .setEmoji(customEmojis.settings)
+            .setStyle(ButtonStyle.Primary);
+
+        const row = new ActionRowBuilder().addComponents(openLogsButton, closedLogsButton);
+
+        return message.reply({ embeds: [logsEmbed], components: [row] });
     }
 
     if(message.content.toLowerCase() === '!close'){
         if (!message.member || !message.member.roles.cache.has(config.supportRoleId)) {
-            return message.channel.send("Você não tem permissão para fechar canais.");
+            return message.reply("Você não tem permissão para fechar canais.").then(msg => {
+                setTimeout(() => msg.delete().catch(() => {}), 5000);
+            }).catch(() => {});
         }
 
         const channel = message.channel;
@@ -842,7 +861,23 @@ client.on('interactionCreate', async (interaction) => {
                 if (userId) {
                     try {
                         const user = await client.users.fetch(userId);
-                        await user.send(`${customEmojis.success} **Compra Aprovada!** Seu pagamento foi confirmado. Aguarde a entrega do produto neste canal ou no seu PV.`);
+                        
+                        const htmlTranscript = await generateHTMLTranscript(channel);
+                        
+                        if (htmlTranscript) {
+                            const buffer = Buffer.from(htmlTranscript, 'utf-8');
+                            const attachment = {
+                                attachment: buffer,
+                                name: `transcricao-${channel.name}-${Date.now()}.html`
+                            };
+                            
+                            await user.send({
+                                content: `${customEmojis.success} **Compra Aprovada!** Seu pagamento foi confirmado. Aguarde a entrega do produto.\n\nAqui está a transcrição completa do atendimento em HTML:`,
+                                files: [attachment]
+                            });
+                        } else {
+                            await user.send(`${customEmojis.success} **Compra Aprovada!** Seu pagamento foi confirmado. Aguarde a entrega do produto neste canal ou no seu PV.`);
+                        }
                     } catch (err) {
                         console.error("Erro ao enviar DM para o usuário:", err);
                     }
@@ -850,7 +885,7 @@ client.on('interactionCreate', async (interaction) => {
 
                 channelPaymentStatus.set(channel.id, { status: 'payment_confirmed', userId: userId });
 
-                await interaction.editReply({ content: `${customEmojis.success} Pagamento confirmado com sucesso! Todas as mensagens anteriores foram removidas.` });
+                await interaction.editReply({ content: `${customEmojis.success} Pagamento confirmado com sucesso! Todas as mensagens anteriores foram removidas e transcrição enviada ao cliente.` });
 
             } catch (error) {
                 console.error("Erro ao confirmar pagamento:", error);
@@ -931,6 +966,16 @@ client.on('interactionCreate', async (interaction) => {
                 userActiveChannels.delete(userId);
             }
 
+            await sendLogToChannel(config.closedOrdersLogChannel, {
+                title: "🔒 Encomenda Fechada pelo Suporte",
+                color: 0x95A5A6,
+                fields: [
+                    { name: "Canal", value: channel.name, inline: true },
+                    { name: "Fechado por", value: interaction.user.tag, inline: true },
+                    { name: "Data", value: new Date().toLocaleString(), inline: false }
+                ]
+            });
+
             setTimeout(async () => {
                 try {
                     await channel.delete();
@@ -942,6 +987,125 @@ client.on('interactionCreate', async (interaction) => {
 
         else if (interaction.customId === "cancel_close_channel") {
             return interaction.reply({ content: "Fechamento cancelado.", ephemeral: true });
+        }
+
+        else if (interaction.customId === "user_cancel_order") {
+            const channel = interaction.channel;
+            if (!channel) return;
+
+            const messages = await channel.messages.fetch({ limit: 100 });
+            const orderMessage = messages.find(m => 
+                m.author.id === client.user.id &&
+                m.embeds.length > 0 &&
+                m.embeds[0].title === "Nova Encomenda Recebida"
+            );
+            
+            let userId = null;
+            if (orderMessage) {
+                const userField = orderMessage.embeds[0].fields.find(f => f.name === "Usuário");
+                if (userField) {
+                    const match = userField.value.match(/\((\d+)\)$/);
+                    if (match) userId = match[1];
+                }
+            }
+
+            if (userId !== interaction.user.id) {
+                return interaction.reply({ content: "Você só pode cancelar sua própria encomenda.", ephemeral: true });
+            }
+
+            const confirmEmbed = new EmbedBuilder()
+                .setTitle(`${customEmojis.error} Confirmar Cancelamento`)
+                .setDescription("Tem certeza que deseja cancelar sua encomenda? Esta ação não pode ser desfeita.")
+                .setColor(0xE74C3C);
+
+            const confirmButton = new ButtonBuilder()
+                .setCustomId("confirm_user_cancel")
+                .setLabel("Sim, Cancelar")
+                .setEmoji(customEmojis.checkmark)
+                .setStyle(ButtonStyle.Danger);
+
+            const cancelButton = new ButtonBuilder()
+                .setCustomId("cancel_user_cancel")
+                .setLabel("Não, Manter")
+                .setEmoji(customEmojis.success)
+                .setStyle(ButtonStyle.Secondary);
+
+            const row = new ActionRowBuilder().addComponents(confirmButton, cancelButton);
+
+            return interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
+        }
+
+        else if (interaction.customId === "confirm_user_cancel") {
+            const channel = interaction.channel;
+            if (!channel) return;
+
+            const messages = await channel.messages.fetch({ limit: 100 });
+            const orderMessage = messages.find(m => 
+                m.author.id === client.user.id &&
+                m.embeds.length > 0 &&
+                m.embeds[0].title === "Nova Encomenda Recebida"
+            );
+            
+            let userId = interaction.user.id;
+
+            const cancelEmbed = new EmbedBuilder()
+                .setTitle(`${customEmojis.error} Encomenda Cancelada pelo Cliente`)
+                .setDescription("Esta encomenda foi cancelada pelo próprio cliente.")
+                .setColor(0xE74C3C)
+                .addFields(
+                    { name: "Cliente", value: `<@${userId}>`, inline: true },
+                    { name: "Data do Cancelamento", value: new Date().toLocaleString(), inline: true }
+                );
+
+            await channel.send({ 
+                content: `<@&${config.supportRoleId}>`,
+                embeds: [cancelEmbed] 
+            });
+
+            await sendLogToChannel(config.closedOrdersLogChannel, {
+                title: "📦 Encomenda Cancelada pelo Cliente",
+                color: 0xE74C3C,
+                fields: [
+                    { name: "Canal", value: channel.name, inline: true },
+                    { name: "Cliente", value: `<@${userId}>`, inline: true },
+                    { name: "Data", value: new Date().toLocaleString(), inline: false }
+                ]
+            });
+
+            await interaction.update({ content: "Sua encomenda foi cancelada. O canal será excluído em breve.", components: [], embeds: [] });
+
+            userActiveChannels.delete(userId);
+            
+            setTimeout(async () => {
+                await channel.delete().catch(console.error);
+            }, 5000);
+        }
+
+        else if (interaction.customId === "cancel_user_cancel") {
+            return interaction.update({ content: "Cancelamento da encomenda foi abortado.", components: [], embeds: [] });
+        }
+
+        else if (interaction.customId === "config_open_logs" || interaction.customId === "config_closed_logs") {
+            if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
+                return interaction.reply({ content: "Você não tem permissão para configurar canais de logs.", ephemeral: true });
+            }
+
+            const isOpenLogs = interaction.customId === "config_open_logs";
+            const modal = new ModalBuilder()
+                .setCustomId(isOpenLogs ? "modal_open_logs" : "modal_closed_logs")
+                .setTitle(isOpenLogs ? "Canal de Encomendas Abertas" : "Canal de Encomendas Fechadas");
+
+            const channelIdInput = new TextInputBuilder()
+                .setCustomId("log_channel_id")
+                .setLabel("Digite o ID do canal")
+                .setPlaceholder("1234567890123456789")
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
+
+            const row = new ActionRowBuilder().addComponents(channelIdInput);
+            modal.addComponents(row);
+
+            return await interaction.showModal(modal);
         }
     }
 
@@ -1068,13 +1232,20 @@ client.on('interactionCreate', async (interaction) => {
                     .setStyle(ButtonStyle.Primary);
                 const cancelButton = new ButtonBuilder()
                     .setCustomId("status_cancel")
-                    .setLabel("Cancelar Encomenda")
+                    .setLabel("Cancelar Encomenda (Suporte)")
                     .setStyle(ButtonStyle.Danger);
                 const completeButton = new ButtonBuilder()
                     .setCustomId("status_complete")
                     .setLabel("Finalizar Encomenda")
                     .setStyle(ButtonStyle.Success);
                 const statusRow = new ActionRowBuilder().addComponents(inProgressButton, cancelButton, completeButton);
+
+                const userCancelButton = new ButtonBuilder()
+                    .setCustomId("user_cancel_order")
+                    .setLabel("Cancelar Minha Encomenda")
+                    .setEmoji(customEmojis.error)
+                    .setStyle(ButtonStyle.Danger);
+                const userCancelRow = new ActionRowBuilder().addComponents(userCancelButton);
 
                 const opcoesButton = new ButtonBuilder()
                     .setCustomId("opcoes")
@@ -1094,7 +1265,18 @@ client.on('interactionCreate', async (interaction) => {
                 await channel.send({ 
                     content: `${customEmojis.bell} Nova encomenda criada! <@&${config.supportRoleId}> pode atender?`, 
                     embeds: [confirmEmbed],
-                    components: [statusRow, optionsRow]
+                    components: [statusRow, optionsRow, userCancelRow]
+                });
+
+                await sendLogToChannel(config.openOrdersLogChannel, {
+                    title: "📦 Nova Encomenda Aberta",
+                    color: 0x3498DB,
+                    fields: [
+                        { name: "Canal", value: channel.name, inline: true },
+                        { name: "Cliente", value: `${interaction.user.tag}`, inline: true },
+                        { name: "Tipo", value: orderType, inline: false },
+                        { name: "Data", value: new Date().toLocaleString(), inline: false }
+                    ]
                 });
                 
                 try {
@@ -1189,8 +1371,176 @@ client.on('interactionCreate', async (interaction) => {
 
             return interaction.reply({ embeds: [successEmbed], ephemeral: true });
         }
+
+        else if(interaction.customId === "modal_open_logs" || interaction.customId === "modal_closed_logs"){
+            if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
+                return interaction.reply({ content: "Você não tem permissão para configurar canais de logs.", ephemeral: true });
+            }
+
+            const channelId = interaction.fields.getTextInputValue("log_channel_id").trim();
+            const isOpenLogs = interaction.customId === "modal_open_logs";
+            
+            const channel = interaction.guild.channels.cache.get(channelId);
+            if (!channel || channel.type !== ChannelType.GuildText) {
+                return interaction.reply({ 
+                    content: `${customEmojis.error} Canal não encontrado! Verifique se o ID está correto e se é um canal de texto válido.`, 
+                    ephemeral: true 
+                });
+            }
+
+            if (isOpenLogs) {
+                config.openOrdersLogChannel = channelId;
+            } else {
+                config.closedOrdersLogChannel = channelId;
+            }
+            saveConfig();
+
+            const successEmbed = new EmbedBuilder()
+                .setTitle(`${customEmojis.success} Canal de Logs Configurado`)
+                .setDescription(`O canal de ${isOpenLogs ? 'encomendas abertas' : 'encomendas fechadas'} foi configurado com sucesso!`)
+                .setColor(0x2ECC71)
+                .addFields(
+                    { name: "Canal", value: `<#${channelId}>`, inline: false },
+                    { name: "Tipo", value: isOpenLogs ? "Encomendas Abertas" : "Encomendas Fechadas", inline: true },
+                    { name: "Status", value: "Ativo e pronto para uso", inline: true }
+                );
+
+            return interaction.reply({ embeds: [successEmbed], ephemeral: true });
+        }
     }
 });
+
+async function generateHTMLTranscript(channel) {
+    try {
+        const messages = await channel.messages.fetch({ limit: 100 });
+        const sortedMessages = messages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+
+        let html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcrição - ${channel.name}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #36393f;
+            color: #dcddde;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #2f3136;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #ffffff;
+            border-bottom: 2px solid #7289da;
+            padding-bottom: 10px;
+        }
+        .message {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #40444b;
+            border-radius: 5px;
+            border-left: 3px solid #7289da;
+        }
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .author {
+            font-weight: bold;
+            color: #7289da;
+            margin-right: 10px;
+        }
+        .timestamp {
+            font-size: 0.75em;
+            color: #72767d;
+        }
+        .content {
+            color: #dcddde;
+            word-wrap: break-word;
+        }
+        .embed-info {
+            color: #99aab5;
+            font-style: italic;
+        }
+        .footer {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #40444b;
+            text-align: center;
+            color: #72767d;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Transcrição do Canal: ${channel.name}</h1>
+        <p><strong>Total de mensagens:</strong> ${sortedMessages.size}</p>
+        <p><strong>Data de geração:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+        <hr>
+`;
+
+        sortedMessages.forEach(msg => {
+            const timestamp = msg.createdAt.toLocaleString('pt-BR');
+            const author = msg.author.tag;
+            const content = msg.content || (msg.embeds.length > 0 ? '[Embed/Conteúdo Rico]' : '[Anexo/Mídia]');
+            
+            html += `
+        <div class="message">
+            <div class="message-header">
+                <span class="author">${author}</span>
+                <span class="timestamp">${timestamp}</span>
+            </div>
+            <div class="content">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+        </div>
+`;
+        });
+
+        html += `
+        <div class="footer">
+            <p>Transcrição gerada automaticamente pelo sistema de encomendas</p>
+            <p>© ${new Date().getFullYear()} - Todos os direitos reservados</p>
+        </div>
+    </div>
+</body>
+</html>
+`;
+
+        return html;
+    } catch (error) {
+        console.error("Erro ao gerar transcrição HTML:", error);
+        return null;
+    }
+}
+
+async function sendLogToChannel(channelId, orderData) {
+    if (!channelId) return;
+    
+    try {
+        const logChannel = client.channels.cache.get(channelId);
+        if (!logChannel) return;
+
+        const logEmbed = new EmbedBuilder()
+            .setTitle(orderData.title)
+            .setColor(orderData.color)
+            .addFields(orderData.fields)
+            .setTimestamp();
+
+        await logChannel.send({ embeds: [logEmbed] });
+    } catch (error) {
+        console.error("Erro ao enviar log para canal:", error);
+    }
+}
 
 function generateProgressBar(progress) {
     const totalBlocks = 10;
