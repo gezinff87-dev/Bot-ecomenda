@@ -219,7 +219,7 @@ client.on('interactionCreate', async (interaction) => {
                 let userName = "Cliente";
                 let userIdValue = null;
                 if (orderMessage) {
-                    const userField = orderMessage.embeds[0].fields.find(f => f.name === "UsuÃ¡rio");
+                    const userField = orderMessage.embeds[0].fields.find(f => f.name === "Usuário");
                     if (userField) {
                         userName = userField.value.split(' ')[0];
                         const match = userField.value.match(/\((\d+)\)$/);
@@ -228,11 +228,11 @@ client.on('interactionCreate', async (interaction) => {
                     await orderMessage.delete().catch(console.error);
                 }
 
-                const newName = channel.name.replace(/(ðŸ“¦-encomenda|ðŸŸ¡-producao)/, "âœ…-finalizado");
+                const newName = channel.name.replace(/📦-encomenda|🔄-producao)/, "✅️-finalizado");
                 await channel.setName(newName);
 
                 const readyEmbed = new EmbedBuilder()
-                    .setTitle("âœ… Encomenda Pronta!")
+                    .setTitle("✅️ Encomenda Pronta!")
                     .setDescription(`Sua encomenda foi finalizada e esta pronta para entrega!`)
                     .setColor(0x2ECC71)
                     .addFields(
@@ -274,7 +274,7 @@ client.on('interactionCreate', async (interaction) => {
             
             const assumirButton = new ButtonBuilder()
                 .setCustomId("assumir_producao")
-                .setLabel("👨‍💼 Assumir ProduÃ§Ã£o")
+                .setLabel("👨‍💼 Assumir Produção")
                 .setStyle(ButtonStyle.Primary);
             const desistirButton = new ButtonBuilder()
                 .setCustomId("desistir_producao")
@@ -287,11 +287,11 @@ client.on('interactionCreate', async (interaction) => {
                 .setStyle(ButtonStyle.Success);
             const progressDecrease = new ButtonBuilder()
                 .setCustomId("progress_decrease")
-                .setLabel("⬜️")
+                .setLabel("➡️")
                 .setStyle(ButtonStyle.Secondary);
             const progressIncrease = new ButtonBuilder()
                 .setCustomId("progress_increase")
-                .setLabel("🟩")
+                .setLabel("⬅️")
                 .setStyle(ButtonStyle.Secondary);
             
             const optionsRow = new ActionRowBuilder().addComponents(assumirButton, desistirButton, notifyButton);
@@ -396,7 +396,7 @@ client.on('interactionCreate', async (interaction) => {
                 if (match) userId = match[1];
             }
             if (!userId) {
-                return interaction.reply({ content: "NÃ£o foi possÃ­vel identificar o usuÃ¡rio.", ephemeral: true });
+                return interaction.reply({ content: "Não foi possível identificar o usuário.", ephemeral: true });
             }
             try {
                 const user = await client.users.fetch(userId);
