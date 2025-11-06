@@ -131,6 +131,7 @@ client.on('messageCreate', async (message) => {
 
     if(message.content.toLowerCase() === "!listar"){
         if (!message.member || !message.member.roles.cache.has(config.supportRoleId)) {
+            message.delete().catch(() => {});
             return message.reply("Você não tem permissão para listar encomendas.").then(msg => {
                 setTimeout(() => msg.delete().catch(() => {}), 5000);
             }).catch(() => {});
@@ -159,6 +160,7 @@ client.on('messageCreate', async (message) => {
 
     if(message.content.toLowerCase() === '!configpix'){
         if (!message.member || !message.member.roles.cache.has(config.supportRoleId)) {
+            message.delete().catch(() => {});
             return message.reply("Você não tem permissão para configurar a chave PIX.").then(msg => {
                 setTimeout(() => msg.delete().catch(() => {}), 5000);
             }).catch(() => {});
@@ -189,6 +191,7 @@ client.on('messageCreate', async (message) => {
 
     if(message.content.toLowerCase() === '!logs'){
         if (!message.member || !message.member.roles.cache.has(config.supportRoleId)) {
+            message.delete().catch(() => {});
             return message.reply("Você não tem permissão para configurar canais de logs.").then(msg => {
                 setTimeout(() => msg.delete().catch(() => {}), 5000);
             }).catch(() => {});
@@ -226,6 +229,7 @@ client.on('messageCreate', async (message) => {
 
     if(message.content.toLowerCase() === '!close'){
         if (!message.member || !message.member.roles.cache.has(config.supportRoleId)) {
+            message.delete().catch(() => {});
             return message.reply("Você não tem permissão para fechar canais.").then(msg => {
                 setTimeout(() => msg.delete().catch(() => {}), 5000);
             }).catch(() => {});
@@ -262,7 +266,10 @@ client.on('messageCreate', async (message) => {
 
     if(message.content.toLowerCase() === '!suporte'){
         if (!message.member || !message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-            return message.channel.send(`${customEmojis.error} Você precisa ser um administrador para configurar o cargo de suporte.`);
+            message.delete().catch(() => {});
+            return message.reply(`${customEmojis.error} Você não tem permissão para configurar o cargo de suporte.`).then(msg => {
+                setTimeout(() => msg.delete().catch(() => {}), 5000);
+            }).catch(() => {});
         }
 
         const currentRole = config.supportRoleId ? `<@&${config.supportRoleId}>` : "Nenhum cargo configurado";
@@ -291,7 +298,10 @@ client.on('messageCreate', async (message) => {
 
     if(message.content.toLowerCase() === '!categoria'){
         if (!message.member || !message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-            return message.channel.send(`${customEmojis.error} Você precisa ser um administrador para configurar a categoria de encomendas.`);
+            message.delete().catch(() => {});
+            return message.reply(`${customEmojis.error} Você não tem permissão para configurar a categoria de encomendas.`).then(msg => {
+                setTimeout(() => msg.delete().catch(() => {}), 5000);
+            }).catch(() => {});
         }
 
         const currentCategory = config.orderCategoryId ? `<#${config.orderCategoryId}>` : "Nenhuma categoria configurada";
@@ -1037,6 +1047,13 @@ client.on('interactionCreate', async (interaction) => {
 
             if (orderOwnerId) {
                 userActiveChannels.delete(orderOwnerId);
+                
+                try {
+                    const user = await client.users.fetch(orderOwnerId);
+                    await user.send(`${customEmojis.error} **Encomenda Cancelada**\n\nSua encomenda foi cancelada pelo ${canceledBy.toLowerCase()}.\n\n**Cancelado por:** ${interaction.user.tag}\n**Data:** ${new Date().toLocaleString()}\n\nO canal de atendimento será excluído em breve.`);
+                } catch (err) {
+                    console.error("Não foi possível enviar DM para o usuário sobre o cancelamento:", err);
+                }
             }
             
             setTimeout(async () => {
