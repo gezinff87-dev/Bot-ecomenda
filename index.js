@@ -156,42 +156,61 @@ client.on('messageCreate', async (message) => {
     }
 
     if (message.channel && message.channel.name && 
-        (message.channel.name.startsWith("✅-finalizado")) &&
-        channelPaymentStatus.get(message.channel.id) === 'awaiting_proof') {
+        message.channel.name.startsWith("✅-finalizado")) {
         
         const hasSupportRole = message.member && message.member.roles.cache.has(config.supportRoleId);
         if (hasSupportRole) return;
 
-        const paymentConfirmEmbed = new EmbedBuilder()
-            .setTitle("💳 Comprovante de Pagamento Recebido")
-            .setDescription("Um comprovante de pagamento foi enviado pelo cliente e aguarda confirmação da equipe de suporte.")
-            .setColor(0xF39C12)
-            .addFields(
-                { name: "Cliente", value: `<@${message.author.id}>`, inline: true },
-                { name: "Data/Hora", value: new Date().toLocaleString(), inline: true },
-                { name: "Mensagem", value: message.content || "Arquivo anexado", inline: false }
-            )
-            .setFooter({ text: "Apenas o suporte pode confirmar o pagamento" });
+        try {
+            const recentMessages = await message.channel.messages.fetch({ limit: 20 });
+            const hasPaymentEmbed = recentMessages.some(m => 
+                m.author.id === client.user.id &&
+                m.embeds.length > 0 &&
+                (m.embeds[0].title === "💰 Informações de Pagamento" || 
+                 m.embeds[0].title === "❌ Pagamento Rejeitado")
+            );
+            
+            const hasConfirmationEmbed = recentMessages.some(m =>
+                m.author.id === client.user.id &&
+                m.embeds.length > 0 &&
+                m.embeds[0].title === "💳 Comprovante de Pagamento Recebido"
+            );
 
-        const confirmPaymentButton = new ButtonBuilder()
-            .setCustomId("confirmar_pagamento")
-            .setLabel("✅ Confirmar Pagamento")
-            .setStyle(ButtonStyle.Success);
+            if (hasPaymentEmbed && !hasConfirmationEmbed) {
+                const paymentConfirmEmbed = new EmbedBuilder()
+                    .setTitle("💳 Comprovante de Pagamento Recebido")
+                    .setDescription("Um comprovante de pagamento foi enviado pelo cliente e aguarda confirmação da equipe de suporte.")
+                    .setColor(0xF39C12)
+                    .addFields(
+                        { name: "Cliente", value: `<@${message.author.id}>`, inline: true },
+                        { name: "Data/Hora", value: new Date().toLocaleString(), inline: true },
+                        { name: "Mensagem", value: message.content || "Arquivo anexado", inline: false }
+                    )
+                    .setFooter({ text: "Apenas o suporte pode confirmar o pagamento" });
 
-        const rejectPaymentButton = new ButtonBuilder()
-            .setCustomId("rejeitar_pagamento")
-            .setLabel("❌ Rejeitar Pagamento")
-            .setStyle(ButtonStyle.Danger);
+                const confirmPaymentButton = new ButtonBuilder()
+                    .setCustomId("confirmar_pagamento")
+                    .setLabel("✅ Confirmar Pagamento")
+                    .setStyle(ButtonStyle.Success);
 
-        const confirmRow = new ActionRowBuilder().addComponents(confirmPaymentButton, rejectPaymentButton);
+                const rejectPaymentButton = new ButtonBuilder()
+                    .setCustomId("rejeitar_pagamento")
+                    .setLabel("❌ Rejeitar Pagamento")
+                    .setStyle(ButtonStyle.Danger);
 
-        await message.channel.send({
-            content: `<@&${config.supportRoleId}>`,
-            embeds: [paymentConfirmEmbed],
-            components: [confirmRow]
-        });
+                const confirmRow = new ActionRowBuilder().addComponents(confirmPaymentButton, rejectPaymentButton);
 
-        channelPaymentStatus.set(message.channel.id, 'proof_sent');
+                await message.channel.send({
+                    content: `<@&${config.supportRoleId}>`,
+                    embeds: [paymentConfirmEmbed],
+                    components: [confirmRow]
+                });
+
+                channelPaymentStatus.set(message.channel.id, 'proof_sent');
+            }
+        } catch (error) {
+            console.error("Erro ao verificar mensagens de pagamento:", error);
+        }
     }
 });
 
