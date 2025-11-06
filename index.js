@@ -51,7 +51,7 @@ const customEmojis = {
     error: "<a:TickRed:1435866005942566962>",
     success: "<a:TickGreen:1435865654770274367>",
     money: "<:k0111:1410699501425131540>",
-    card: "<:irud:1433963783201751172>",
+    card: "<:emoji_11:1436113760971395102>",
     hourglass: "<a:loading:1435863836606468177>",
     party: "<a:celebration1:1436054927179907106>",
     package: "<:ei_1755968898883removebgpreview:1408861559056371732>",
