@@ -50,7 +50,7 @@ let config = {
 const customEmojis = {
     error: "<a:TickRed:1435866005942566962>",
     success: "<a:TickGreen:1435865654770274367>",
-    money: "💰",
+    money: "<:robuxgif:1436104162575384668>",
     card: "💳",
     hourglass: "<a:loading:1435863836606468177>",
     party: "<a:celebration1:1436054927179907106>",
