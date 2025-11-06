@@ -13,7 +13,10 @@ const {
     EmbedBuilder, 
     ChannelType, 
     PermissionsBitField,
-    StringSelectMenuBuilder
+    StringSelectMenuBuilder,
+    REST,
+    Routes,
+    SlashCommandBuilder
 } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -91,6 +94,45 @@ function saveConfig() {
 
 loadConfig();
 
+async function registerSlashCommands() {
+    const commands = [
+        new SlashCommandBuilder()
+            .setName('encomenda')
+            .setDescription('Inicia o sistema de encomendas'),
+        new SlashCommandBuilder()
+            .setName('listar')
+            .setDescription('Lista todas as encomendas ativas'),
+        new SlashCommandBuilder()
+            .setName('configpix')
+            .setDescription('Configura a chave PIX para pagamentos'),
+        new SlashCommandBuilder()
+            .setName('logs')
+            .setDescription('Configura os canais de logs'),
+        new SlashCommandBuilder()
+            .setName('close')
+            .setDescription('Fecha o canal de encomenda atual'),
+        new SlashCommandBuilder()
+            .setName('suporte')
+            .setDescription('Configura o cargo de suporte'),
+        new SlashCommandBuilder()
+            .setName('categoria')
+            .setDescription('Configura a categoria de encomendas')
+    ].map(command => command.toJSON());
+
+    const rest = new REST({ version: '10' }).setToken(TOKEN);
+
+    try {
+        console.log('Registrando comandos slash...');
+        await rest.put(
+            Routes.applicationCommands(client.user.id),
+            { body: commands }
+        );
+        console.log('Comandos slash registrados com sucesso!');
+    } catch (error) {
+        console.error('Erro ao registrar comandos slash:', error);
+    }
+}
+
 function sanitizeUsername(username) {
     let sanitized = username
         .toLowerCase()
@@ -106,231 +148,244 @@ function sanitizeUsername(username) {
     return sanitized;
 }
 
-client.once('ready', () => {
+client.once('ready', async () => {
     console.log(`Bot online como ${client.user.tag}`);
+    await registerSlashCommands();
 });
 
 client.on('messageCreate', async (message) => {
     if(message.author.bot) return;
-
-    if(message.content.toLowerCase() === '!encomenda'){
-        const orderEmbed = new EmbedBuilder()
-            .setTitle("Sistema de Encomendas")
-            .setDescription("Utilize este sistema para fazer sua encomenda. Clique em **Fazer Encomenda** para iniciar e preencha os dados necessários.")
-            .setColor(0x00AE86);
-
-        const orderButton = new ButtonBuilder()
-            .setCustomId("order_button")
-            .setLabel("Fazer Encomenda")
-            .setStyle(ButtonStyle.Primary);
-        
-        const row = new ActionRowBuilder().addComponents(orderButton);
-        
-        await message.channel.send({ embeds: [orderEmbed], components: [row] });
-    }
-
-    if(message.content.toLowerCase() === "!listar"){
-        if (!message.member || !message.member.roles.cache.has(config.supportRoleId)) {
-            message.delete().catch(() => {});
-            return message.reply("Você não tem permissão para listar encomendas.").then(msg => {
-                setTimeout(() => msg.delete().catch(() => {}), 5000);
-            }).catch(() => {});
-        }
-
-        const guild = message.guild;
-        if(!guild) return;
-        
-        const channels = guild.channels.cache.filter(ch => 
-            ch.name.startsWith("📦-encomenda") ||
-            ch.name.startsWith("🟡-producao") ||
-            ch.name.startsWith("✅-finalizado")
-        );
-        
-        if(channels.size === 0){
-            return message.channel.send("Nenhuma encomenda ativa encontrada.");
-        }
-        
-        let listMsg = "Encomendas ativas:\n";
-        channels.forEach(ch => {
-            listMsg += `- ${ch.name}\n`;
-        });
-        
-        return message.channel.send(listMsg);
-    }
-
-    if(message.content.toLowerCase() === '!configpix'){
-        if (!message.member || !message.member.roles.cache.has(config.supportRoleId)) {
-            message.delete().catch(() => {});
-            return message.reply("Você não tem permissão para configurar a chave PIX.").then(msg => {
-                setTimeout(() => msg.delete().catch(() => {}), 5000);
-            }).catch(() => {});
-        }
-
-        const currentPixKey = config.pixKey || "Nenhuma chave configurada";
-        
-        const pixEmbed = new EmbedBuilder()
-            .setTitle(`${customEmojis.settings} Configuração de Chave PIX`)
-            .setDescription("Configure a chave PIX que será exibida aos clientes no momento do pagamento.")
-            .setColor(0x9B59B6)
-            .addFields({ name: "Chave Atual", value: `\`${currentPixKey}\``, inline: false });
-
-        return await message.reply({ 
-            embeds: [pixEmbed],
-            content: "Clique no botão abaixo para configurar ou alterar a chave PIX.", 
-            components: [
-                new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId("open_config_pix")
-                        .setLabel("Configurar PIX")
-                        .setEmoji(customEmojis.settings)
-                        .setStyle(ButtonStyle.Primary)
-                )
-            ]
-        });
-    }
-
-    if(message.content.toLowerCase() === '!logs'){
-        if (!message.member || !message.member.roles.cache.has(config.supportRoleId)) {
-            message.delete().catch(() => {});
-            return message.reply("Você não tem permissão para configurar canais de logs.").then(msg => {
-                setTimeout(() => msg.delete().catch(() => {}), 5000);
-            }).catch(() => {});
-        }
-
-        const guild = message.guild;
-        if (!guild) return;
-
-        const logsEmbed = new EmbedBuilder()
-            .setTitle(`${customEmojis.settings} Configuração de Canais de Logs`)
-            .setDescription("Configure os canais onde serão registrados os logs de encomendas abertas e fechadas.")
-            .setColor(0x9B59B6)
-            .addFields(
-                { name: "Canal de Encomendas Abertas", value: config.openOrdersLogChannel ? `<#${config.openOrdersLogChannel}>` : "Não configurado", inline: true },
-                { name: "Canal de Encomendas Fechadas", value: config.closedOrdersLogChannel ? `<#${config.closedOrdersLogChannel}>` : "Não configurado", inline: true }
-            )
-            .setFooter({ text: "Clique nos botões abaixo para configurar" });
-
-        const openLogsButton = new ButtonBuilder()
-            .setCustomId("config_open_logs")
-            .setLabel("Configurar Canal Abertas")
-            .setEmoji(customEmojis.settings)
-            .setStyle(ButtonStyle.Primary);
-
-        const closedLogsButton = new ButtonBuilder()
-            .setCustomId("config_closed_logs")
-            .setLabel("Configurar Canal Fechadas")
-            .setEmoji(customEmojis.settings)
-            .setStyle(ButtonStyle.Primary);
-
-        const row = new ActionRowBuilder().addComponents(openLogsButton, closedLogsButton);
-
-        return message.reply({ embeds: [logsEmbed], components: [row] });
-    }
-
-    if(message.content.toLowerCase() === '!close'){
-        if (!message.member || !message.member.roles.cache.has(config.supportRoleId)) {
-            message.delete().catch(() => {});
-            return message.reply("Você não tem permissão para fechar canais.").then(msg => {
-                setTimeout(() => msg.delete().catch(() => {}), 5000);
-            }).catch(() => {});
-        }
-
-        const channel = message.channel;
-        if(!channel || !channel.name) return;
-
-        if(!channel.name.includes('encomenda') && !channel.name.includes('producao') && !channel.name.includes('finalizado')){
-            return message.channel.send("Este comando só pode ser usado em canais de encomenda.");
-        }
-
-        const confirmEmbed = new EmbedBuilder()
-            .setTitle(`${customEmojis.error} Confirmar Fechamento`)
-            .setDescription("Tem certeza que deseja fechar este canal? Esta ação não pode ser desfeita.")
-            .setColor(0xE74C3C);
-
-        const confirmButton = new ButtonBuilder()
-            .setCustomId("confirm_close_channel")
-            .setLabel("Confirmar")
-            .setEmoji(customEmojis.checkmark)
-            .setStyle(ButtonStyle.Danger);
-
-        const cancelButton = new ButtonBuilder()
-            .setCustomId("cancel_close_channel")
-            .setLabel("Cancelar")
-            .setEmoji(customEmojis.error)
-            .setStyle(ButtonStyle.Secondary);
-
-        const row = new ActionRowBuilder().addComponents(confirmButton, cancelButton);
-
-        return message.channel.send({ embeds: [confirmEmbed], components: [row] });
-    }
-
-    if(message.content.toLowerCase() === '!suporte'){
-        if (!message.member || !message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-            message.delete().catch(() => {});
-            return message.reply(`${customEmojis.error} Você não tem permissão para configurar o cargo de suporte.`).then(msg => {
-                setTimeout(() => msg.delete().catch(() => {}), 5000);
-            }).catch(() => {});
-        }
-
-        const currentRole = config.supportRoleId ? `<@&${config.supportRoleId}>` : "Nenhum cargo configurado";
-        
-        const supportEmbed = new EmbedBuilder()
-            .setTitle(`${customEmojis.settings} Configuração do Cargo de Suporte`)
-            .setDescription("Configure qual cargo terá permissões de suporte para gerenciar encomendas.")
-            .setColor(0x9B59B6)
-            .addFields({ name: "Cargo Atual", value: currentRole, inline: false })
-            .setFooter({ text: "Mencione o cargo ou forneça o ID do cargo" });
-
-        await message.reply({ 
-            embeds: [supportEmbed],
-            content: "Clique no botão abaixo para configurar o cargo de suporte.", 
-            components: [
-                new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId("open_config_support")
-                        .setLabel("Configurar Cargo de Suporte")
-                        .setEmoji(customEmojis.settings)
-                        .setStyle(ButtonStyle.Primary)
-                )
-            ]
-        });
-    }
-
-    if(message.content.toLowerCase() === '!categoria'){
-        if (!message.member || !message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-            message.delete().catch(() => {});
-            return message.reply(`${customEmojis.error} Você não tem permissão para configurar a categoria de encomendas.`).then(msg => {
-                setTimeout(() => msg.delete().catch(() => {}), 5000);
-            }).catch(() => {});
-        }
-
-        const currentCategory = config.orderCategoryId ? `<#${config.orderCategoryId}>` : "Nenhuma categoria configurada";
-        
-        const categoryEmbed = new EmbedBuilder()
-            .setTitle(`${customEmojis.settings} Configuração da Categoria de Encomendas`)
-            .setDescription("Configure em qual categoria os canais de encomenda serão criados.")
-            .setColor(0x9B59B6)
-            .addFields({ name: "Categoria Atual", value: currentCategory, inline: false })
-            .setFooter({ text: "Forneça o ID da categoria" });
-
-        await message.reply({ 
-            embeds: [categoryEmbed],
-            content: "Clique no botão abaixo para configurar a categoria de encomendas.", 
-            components: [
-                new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId("open_config_category")
-                        .setLabel("Configurar Categoria")
-                        .setEmoji(customEmojis.settings)
-                        .setStyle(ButtonStyle.Primary)
-                )
-            ]
-        });
-    }
-
 });
 
 client.on('interactionCreate', async (interaction) => {
+    if (interaction.isChatInputCommand()) {
+        const { commandName } = interaction;
+
+        if (commandName === 'encomenda') {
+            const orderEmbed = new EmbedBuilder()
+                .setTitle("Sistema de Encomendas")
+                .setDescription("Utilize este sistema para fazer sua encomenda. Clique em **Fazer Encomenda** para iniciar e preencha os dados necessários.")
+                .setColor(0x00AE86);
+
+            const orderButton = new ButtonBuilder()
+                .setCustomId("order_button")
+                .setLabel("Fazer Encomenda")
+                .setStyle(ButtonStyle.Primary);
+            
+            const row = new ActionRowBuilder().addComponents(orderButton);
+            
+            return await interaction.reply({ embeds: [orderEmbed], components: [row] });
+        }
+
+        if (commandName === 'listar') {
+            if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
+                return interaction.reply({ 
+                    content: `${customEmojis.error} Você não tem permissão para listar encomendas.`, 
+                    ephemeral: true 
+                });
+            }
+
+            const guild = interaction.guild;
+            if(!guild) return;
+            
+            const channels = guild.channels.cache.filter(ch => 
+                ch.name.startsWith("📦-encomenda") ||
+                ch.name.startsWith("🟡-producao") ||
+                ch.name.startsWith("✅-finalizado")
+            );
+            
+            if(channels.size === 0){
+                return interaction.reply({ 
+                    content: "Nenhuma encomenda ativa encontrada.", 
+                    ephemeral: true 
+                });
+            }
+            
+            let listMsg = "**Encomendas ativas:**\n";
+            channels.forEach(ch => {
+                listMsg += `- ${ch.name}\n`;
+            });
+            
+            return interaction.reply({ content: listMsg, ephemeral: true });
+        }
+
+        if (commandName === 'configpix') {
+            if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
+                return interaction.reply({ 
+                    content: `${customEmojis.error} Você não tem permissão para configurar a chave PIX.`, 
+                    ephemeral: true 
+                });
+            }
+
+            const currentPixKey = config.pixKey || "Nenhuma chave configurada";
+            
+            const pixEmbed = new EmbedBuilder()
+                .setTitle(`${customEmojis.settings} Configuração de Chave PIX`)
+                .setDescription("Configure a chave PIX que será exibida aos clientes no momento do pagamento.")
+                .setColor(0x9B59B6)
+                .addFields({ name: "Chave Atual", value: `\`${currentPixKey}\``, inline: false });
+
+            return await interaction.reply({ 
+                embeds: [pixEmbed],
+                content: "Clique no botão abaixo para configurar ou alterar a chave PIX.", 
+                components: [
+                    new ActionRowBuilder().addComponents(
+                        new ButtonBuilder()
+                            .setCustomId("open_config_pix")
+                            .setLabel("Configurar PIX")
+                            .setEmoji(customEmojis.settings)
+                            .setStyle(ButtonStyle.Primary)
+                    )
+                ],
+                ephemeral: true
+            });
+        }
+
+        if (commandName === 'logs') {
+            if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
+                return interaction.reply({ 
+                    content: `${customEmojis.error} Você não tem permissão para configurar canais de logs.`, 
+                    ephemeral: true 
+                });
+            }
+
+            const guild = interaction.guild;
+            if (!guild) return;
+
+            const logsEmbed = new EmbedBuilder()
+                .setTitle(`${customEmojis.settings} Configuração de Canais de Logs`)
+                .setDescription("Configure os canais onde serão registrados os logs de encomendas abertas e fechadas.")
+                .setColor(0x9B59B6)
+                .addFields(
+                    { name: "Canal de Encomendas Abertas", value: config.openOrdersLogChannel ? `<#${config.openOrdersLogChannel}>` : "Não configurado", inline: true },
+                    { name: "Canal de Encomendas Fechadas", value: config.closedOrdersLogChannel ? `<#${config.closedOrdersLogChannel}>` : "Não configurado", inline: true }
+                )
+                .setFooter({ text: "Clique nos botões abaixo para configurar" });
+
+            const openLogsButton = new ButtonBuilder()
+                .setCustomId("config_open_logs")
+                .setLabel("Configurar Canal Abertas")
+                .setEmoji(customEmojis.settings)
+                .setStyle(ButtonStyle.Primary);
+
+            const closedLogsButton = new ButtonBuilder()
+                .setCustomId("config_closed_logs")
+                .setLabel("Configurar Canal Fechadas")
+                .setEmoji(customEmojis.settings)
+                .setStyle(ButtonStyle.Primary);
+
+            const row = new ActionRowBuilder().addComponents(openLogsButton, closedLogsButton);
+
+            return interaction.reply({ embeds: [logsEmbed], components: [row], ephemeral: true });
+        }
+
+        if (commandName === 'close') {
+            if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
+                return interaction.reply({ 
+                    content: `${customEmojis.error} Você não tem permissão para fechar canais.`, 
+                    ephemeral: true 
+                });
+            }
+
+            const channel = interaction.channel;
+            if(!channel || !channel.name) return;
+
+            if(!channel.name.includes('encomenda') && !channel.name.includes('producao') && !channel.name.includes('finalizado')){
+                return interaction.reply({ 
+                    content: "Este comando só pode ser usado em canais de encomenda.", 
+                    ephemeral: true 
+                });
+            }
+
+            const confirmEmbed = new EmbedBuilder()
+                .setTitle(`${customEmojis.error} Confirmar Fechamento`)
+                .setDescription("Tem certeza que deseja fechar este canal? Esta ação não pode ser desfeita.")
+                .setColor(0xE74C3C);
+
+            const confirmButton = new ButtonBuilder()
+                .setCustomId("confirm_close_channel")
+                .setLabel("Confirmar")
+                .setEmoji(customEmojis.checkmark)
+                .setStyle(ButtonStyle.Danger);
+
+            const cancelButton = new ButtonBuilder()
+                .setCustomId("cancel_close_channel")
+                .setLabel("Cancelar")
+                .setEmoji(customEmojis.error)
+                .setStyle(ButtonStyle.Secondary);
+
+            const row = new ActionRowBuilder().addComponents(confirmButton, cancelButton);
+
+            return interaction.reply({ embeds: [confirmEmbed], components: [row] });
+        }
+
+        if (commandName === 'suporte') {
+            if (!interaction.member || !interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+                return interaction.reply({ 
+                    content: `${customEmojis.error} Você não tem permissão para configurar o cargo de suporte.`, 
+                    ephemeral: true 
+                });
+            }
+
+            const currentRole = config.supportRoleId ? `<@&${config.supportRoleId}>` : "Nenhum cargo configurado";
+            
+            const supportEmbed = new EmbedBuilder()
+                .setTitle(`${customEmojis.settings} Configuração do Cargo de Suporte`)
+                .setDescription("Configure qual cargo terá permissões de suporte para gerenciar encomendas.")
+                .setColor(0x9B59B6)
+                .addFields({ name: "Cargo Atual", value: currentRole, inline: false })
+                .setFooter({ text: "Mencione o cargo ou forneça o ID do cargo" });
+
+            return await interaction.reply({ 
+                embeds: [supportEmbed],
+                content: "Clique no botão abaixo para configurar o cargo de suporte.", 
+                components: [
+                    new ActionRowBuilder().addComponents(
+                        new ButtonBuilder()
+                            .setCustomId("open_config_support")
+                            .setLabel("Configurar Cargo de Suporte")
+                            .setEmoji(customEmojis.settings)
+                            .setStyle(ButtonStyle.Primary)
+                    )
+                ],
+                ephemeral: true
+            });
+        }
+
+        if (commandName === 'categoria') {
+            if (!interaction.member || !interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+                return interaction.reply({ 
+                    content: `${customEmojis.error} Você não tem permissão para configurar a categoria de encomendas.`, 
+                    ephemeral: true 
+                });
+            }
+
+            const currentCategory = config.orderCategoryId ? `<#${config.orderCategoryId}>` : "Nenhuma categoria configurada";
+            
+            const categoryEmbed = new EmbedBuilder()
+                .setTitle(`${customEmojis.settings} Configuração da Categoria de Encomendas`)
+                .setDescription("Configure em qual categoria os canais de encomenda serão criados.")
+                .setColor(0x9B59B6)
+                .addFields({ name: "Categoria Atual", value: currentCategory, inline: false })
+                .setFooter({ text: "Forneça o ID da categoria" });
+
+            return await interaction.reply({ 
+                embeds: [categoryEmbed],
+                content: "Clique no botão abaixo para configurar a categoria de encomendas.", 
+                components: [
+                    new ActionRowBuilder().addComponents(
+                        new ButtonBuilder()
+                            .setCustomId("open_config_category")
+                            .setLabel("Configurar Categoria")
+                            .setEmoji(customEmojis.settings)
+                            .setStyle(ButtonStyle.Primary)
+                    )
+                ],
+                ephemeral: true
+            });
+        }
+    }
+    
     if (interaction.isButton()) {
         if (interaction.customId === "order_button") {
             const modal = new ModalBuilder()
