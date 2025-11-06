@@ -48,7 +48,7 @@ const customEmojis = {
     money: "<a:tk1:1436055158017622058>",
     card: "💳",
     hourglass: "<a:loading:1435863836606468177>",
-    party: "🎉",
+    party: "<a:celebration1:1436054927179907106>",
     package: "📦",
     settings: "⚙️",
     worker: "👷",
