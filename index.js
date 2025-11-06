@@ -40,8 +40,8 @@ const TOKEN = process.env.DISCORD_TOKEN;
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
 let config = {
-    orderCategoryId: null,
-    supportRoleId: null,
+    orderCategoryId: "1417986273020219442",
+    supportRoleId: "1435758114002567258",
     pixKey: null,
     openOrdersLogChannel: null,
     closedOrdersLogChannel: null
@@ -169,6 +169,20 @@ client.on('interactionCreate', async (interaction) => {
                 });
             }
 
+            if (!config.orderCategoryId) {
+                return interaction.reply({ 
+                    content: `${customEmojis.error} A categoria de encomendas não foi configurada. Use \`/categoria\` para configurar.`, 
+                    ephemeral: true 
+                });
+            }
+
+            if (!config.supportRoleId) {
+                return interaction.reply({ 
+                    content: `${customEmojis.error} O cargo de suporte não foi configurado. Use \`/suporte\` para configurar.`, 
+                    ephemeral: true 
+                });
+            }
+
             const orderEmbed = new EmbedBuilder()
                 .setTitle("Sistema de Encomendas")
                 .setDescription("Utilize este sistema para fazer sua encomenda. Clique em **Fazer Encomenda** para iniciar e preencha os dados necessários.")
@@ -181,9 +195,9 @@ client.on('interactionCreate', async (interaction) => {
             
             const row = new ActionRowBuilder().addComponents(orderButton);
             
-            await interaction.reply({ embeds: [orderEmbed], components: [row], ephemeral: true });
-            
-            return await interaction.channel.send({ embeds: [orderEmbed], components: [row] });
+            await interaction.deferReply({ ephemeral: true });
+            await interaction.channel.send({ embeds: [orderEmbed], components: [row] });
+            return await interaction.deleteReply();
         }
 
         if (commandName === 'listar') {
