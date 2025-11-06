@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const { 
     Client, 
     GatewayIntentBits, 
@@ -27,7 +29,7 @@ const client = new Client({
 });
 
 if (!process.env.DISCORD_TOKEN) {
-    console.error('ERRO: DISCORD_TOKEN nÃ£o configurado. Por favor, configure a variÃ¡vel de ambiente DISCORD_TOKEN.');
+    console.error('ERRO: DISCORD_TOKEN nÃ£o configurado. Por favor, configure no arquivo .env');
     process.exit(1);
 }
 
