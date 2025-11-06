@@ -42,6 +42,8 @@ let config = {
     pixKey: null
 };
 
+const channelPaymentStatus = new Map();
+
 function loadConfig() {
     try {
         if (fs.existsSync(CONFIG_FILE)) {
@@ -151,6 +153,45 @@ client.on('messageCreate', async (message) => {
                 )
             ]
         });
+    }
+
+    if (message.channel && message.channel.name && 
+        (message.channel.name.startsWith("✅-finalizado")) &&
+        channelPaymentStatus.get(message.channel.id) === 'awaiting_proof') {
+        
+        const hasSupportRole = message.member && message.member.roles.cache.has(config.supportRoleId);
+        if (hasSupportRole) return;
+
+        const paymentConfirmEmbed = new EmbedBuilder()
+            .setTitle("💳 Comprovante de Pagamento Recebido")
+            .setDescription("Um comprovante de pagamento foi enviado pelo cliente e aguarda confirmação da equipe de suporte.")
+            .setColor(0xF39C12)
+            .addFields(
+                { name: "Cliente", value: `<@${message.author.id}>`, inline: true },
+                { name: "Data/Hora", value: new Date().toLocaleString(), inline: true },
+                { name: "Mensagem", value: message.content || "Arquivo anexado", inline: false }
+            )
+            .setFooter({ text: "Apenas o suporte pode confirmar o pagamento" });
+
+        const confirmPaymentButton = new ButtonBuilder()
+            .setCustomId("confirmar_pagamento")
+            .setLabel("✅ Confirmar Pagamento")
+            .setStyle(ButtonStyle.Success);
+
+        const rejectPaymentButton = new ButtonBuilder()
+            .setCustomId("rejeitar_pagamento")
+            .setLabel("❌ Rejeitar Pagamento")
+            .setStyle(ButtonStyle.Danger);
+
+        const confirmRow = new ActionRowBuilder().addComponents(confirmPaymentButton, rejectPaymentButton);
+
+        await message.channel.send({
+            content: `<@&${config.supportRoleId}>`,
+            embeds: [paymentConfirmEmbed],
+            components: [confirmRow]
+        });
+
+        channelPaymentStatus.set(message.channel.id, 'proof_sent');
     }
 });
 
@@ -501,7 +542,101 @@ client.on('interactionCreate', async (interaction) => {
                 )
                 .setFooter({ text: "Copie a chave PIX acima e use no app do seu banco" });
 
+            channelPaymentStatus.set(interaction.channel.id, 'awaiting_proof');
+
             return interaction.reply({ embeds: [paymentEmbed], ephemeral: false });
+        }
+
+        else if (interaction.customId === "confirmar_pagamento") {
+            if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
+                return interaction.reply({ content: "❌ Você não tem permissão para confirmar pagamentos.", ephemeral: true });
+            }
+
+            const channel = interaction.channel;
+            if (!channel) return;
+
+            await interaction.deferReply({ ephemeral: true });
+
+            try {
+                const messages = await channel.messages.fetch({ limit: 50 });
+                const messagesToDelete = messages.filter(m => 
+                    m.author.id === client.user.id && m.embeds.length > 0
+                );
+
+                for (const msg of messagesToDelete.values()) {
+                    await msg.delete().catch(console.error);
+                }
+
+                let userId = null;
+                const orderMessage = messagesToDelete.find(m => 
+                    m.embeds[0] && m.embeds[0].title === "Nova Encomenda Recebida"
+                );
+                
+                if (orderMessage) {
+                    const userField = orderMessage.embeds[0].fields.find(f => f.name === "Usuário");
+                    if (userField) {
+                        const match = userField.value.match(/\((\d+)\)$/);
+                        if (match) userId = match[1];
+                    }
+                }
+
+                const deliveryEmbed = new EmbedBuilder()
+                    .setTitle("📦 Aguardando Entrega do Produto")
+                    .setDescription("Seu pagamento foi confirmado com sucesso! Estamos preparando seu produto para entrega.")
+                    .setColor(0x3498DB)
+                    .addFields(
+                        { name: "Status do Pagamento", value: "✅ Confirmado", inline: true },
+                        { name: "Status da Entrega", value: "🚚 Em preparação", inline: true },
+                        { name: "Data de Confirmação", value: new Date().toLocaleString(), inline: false }
+                    )
+                    .setFooter({ text: "Você será notificado assim que o produto for entregue" });
+
+                await channel.send({
+                    content: userId ? `<@${userId}>` : "@here",
+                    embeds: [deliveryEmbed]
+                });
+
+                if (userId) {
+                    try {
+                        const user = await client.users.fetch(userId);
+                        await user.send("✅ Seu pagamento foi confirmado! Aguarde a entrega do seu produto.");
+                    } catch (err) {
+                        console.error("Erro ao enviar DM para o usuário:", err);
+                    }
+                }
+
+                channelPaymentStatus.set(channel.id, 'payment_confirmed');
+
+                await interaction.editReply({ content: "✅ Pagamento confirmado com sucesso! Todas as mensagens anteriores foram removidas." });
+
+            } catch (error) {
+                console.error("Erro ao confirmar pagamento:", error);
+                await interaction.editReply({ content: "❌ Ocorreu um erro ao processar a confirmação." });
+            }
+        }
+
+        else if (interaction.customId === "rejeitar_pagamento") {
+            if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
+                return interaction.reply({ content: "❌ Você não tem permissão para rejeitar pagamentos.", ephemeral: true });
+            }
+
+            const channel = interaction.channel;
+            if (!channel) return;
+
+            const rejectEmbed = new EmbedBuilder()
+                .setTitle("❌ Pagamento Rejeitado")
+                .setDescription("O comprovante enviado foi rejeitado pela equipe de suporte. Por favor, verifique os dados e tente novamente.")
+                .setColor(0xE74C3C)
+                .addFields(
+                    { name: "Motivo", value: "Comprovante inválido ou dados incorretos", inline: false },
+                    { name: "Próximos Passos", value: "Realize o pagamento correto e envie um novo comprovante", inline: false }
+                );
+
+            await channel.send({ embeds: [rejectEmbed] });
+
+            channelPaymentStatus.set(channel.id, 'awaiting_proof');
+
+            return interaction.reply({ content: "Pagamento rejeitado. O cliente foi notificado.", ephemeral: true });
         }
     }
 
