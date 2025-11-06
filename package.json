@@ -1,21 +1,16 @@
 {
-  "name": "bot-fila-2.0",
+  "name": "discord-bot-encomendas",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Bot Discord para sistema de encomendas",
+  "main": "bot.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node bot.js"
   },
-  "keywords": [],
+  "keywords": ["discord", "bot", "encomendas"],
   "author": "",
-  "license": "ISC",
-  "description": "",
-  "devDependencies": {
-    "typescript": "^5.7.3"
-  },
+  "license": "MIT",
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
-    "discord.js": "^14.17.3",
-    "discord.js-selfbot-v13": "^3.5.1",
-    "dotenv": "^16.4.7"
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.3.1"
   }
 }
