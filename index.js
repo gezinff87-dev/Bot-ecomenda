@@ -40,8 +40,8 @@ const TOKEN = process.env.DISCORD_TOKEN;
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
 let config = {
-    orderCategoryId: "1417986273020219442",
-    supportRoleId: "1435758114002567258",
+    orderCategoryId: null,
+    supportRoleId: null,
     pixKey: null,
     openOrdersLogChannel: null,
     closedOrdersLogChannel: null
@@ -181,7 +181,9 @@ client.on('interactionCreate', async (interaction) => {
             
             const row = new ActionRowBuilder().addComponents(orderButton);
             
-            return await interaction.reply({ embeds: [orderEmbed], components: [row] });
+            await interaction.reply({ embeds: [orderEmbed], components: [row], ephemeral: true });
+            
+            return await interaction.channel.send({ embeds: [orderEmbed], components: [row] });
         }
 
         if (commandName === 'listar') {
