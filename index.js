@@ -361,8 +361,7 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         else if (interaction.customId === "status_in_progress" ||
-                 interaction.customId === "status_complete" ||
-                 interaction.customId === "status_cancel") {
+                 interaction.customId === "status_complete") {
             if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
                 return interaction.reply({ content: "Você não tem permissão para utilizar este botão.", ephemeral: true });
             }
@@ -434,55 +433,6 @@ client.on('interactionCreate', async (interaction) => {
                 }
 
                 return interaction.reply({ content: "Encomenda finalizada com sucesso!", ephemeral: true });
-            } else if (interaction.customId === "status_cancel") {
-                const messages = await channel.messages.fetch({ limit: 100 });
-                const orderMessage = messages.find(m => 
-                    m.author.id === client.user.id &&
-                    m.embeds.length > 0 &&
-                    m.embeds[0].title === "Nova Encomenda Recebida"
-                );
-                
-                let userId = null;
-                if (orderMessage) {
-                    const userField = orderMessage.embeds[0].fields.find(f => f.name === "Usuário");
-                    if (userField) {
-                        const match = userField.value.match(/\((\d+)\)$/);
-                        if (match) userId = match[1];
-                    }
-                }
-
-                const cancelEmbed = new EmbedBuilder()
-                    .setTitle(`${customEmojis.error} Encomenda Cancelada`)
-                    .setDescription("Infelizmente, sua encomenda foi cancelada pela equipe de suporte.")
-                    .setColor(0xE74C3C)
-                    .addFields(
-                        { name: "Motivo", value: "Cancelada pelo suporte", inline: false },
-                        { name: "Data do Cancelamento", value: new Date().toLocaleString(), inline: false }
-                    );
-
-                await channel.send({ 
-                    content: userId ? `<@${userId}>` : "@here",
-                    embeds: [cancelEmbed] 
-                });
-
-                if (userId) {
-                    try {
-                        const user = await client.users.fetch(userId);
-                        await user.send(`${customEmojis.error} **Encomenda Cancelada**\n\nSua encomenda foi cancelada pela equipe de suporte. Para mais informações, entre em contato com a equipe.`);
-                    } catch (err) {
-                        console.error("Erro ao enviar DM para o usuário:", err);
-                    }
-                }
-
-                await interaction.reply({ content: "Encomenda cancelada. O cliente foi notificado. O canal será excluído.", ephemeral: true });
-                
-                if (userId) {
-                    userActiveChannels.delete(userId);
-                }
-                
-                return setTimeout(async () => {
-                    await channel.delete().catch(console.error);
-                }, 5000);
             }
         }
 
@@ -989,7 +939,7 @@ client.on('interactionCreate', async (interaction) => {
             return interaction.reply({ content: "Fechamento cancelado.", ephemeral: true });
         }
 
-        else if (interaction.customId === "user_cancel_order") {
+        else if (interaction.customId === "cancel_order") {
             const channel = interaction.channel;
             if (!channel) return;
 
@@ -1000,34 +950,35 @@ client.on('interactionCreate', async (interaction) => {
                 m.embeds[0].title === "Nova Encomenda Recebida"
             );
             
-            let userId = null;
+            let orderOwnerId = null;
             if (orderMessage) {
                 const userField = orderMessage.embeds[0].fields.find(f => f.name === "Usuário");
                 if (userField) {
                     const match = userField.value.match(/\((\d+)\)$/);
-                    if (match) userId = match[1];
+                    if (match) orderOwnerId = match[1];
                 }
             }
 
-            if (userId !== interaction.user.id) {
-                return interaction.reply({ content: "Você só pode cancelar sua própria encomenda.", ephemeral: true });
+            const isSupport = interaction.member && interaction.member.roles.cache.has(config.supportRoleId);
+            const isOwner = orderOwnerId === interaction.user.id;
+
+            if (!isSupport && !isOwner) {
+                return interaction.reply({ content: "Você não tem permissão para cancelar esta encomenda.", ephemeral: true });
             }
 
             const confirmEmbed = new EmbedBuilder()
                 .setTitle(`${customEmojis.error} Confirmar Cancelamento`)
-                .setDescription("Tem certeza que deseja cancelar sua encomenda? Esta ação não pode ser desfeita.")
+                .setDescription("Tem certeza que deseja cancelar esta encomenda? Esta ação não pode ser desfeita.")
                 .setColor(0xE74C3C);
 
             const confirmButton = new ButtonBuilder()
-                .setCustomId("confirm_user_cancel")
+                .setCustomId("confirm_cancel_order")
                 .setLabel("Sim, Cancelar")
-                .setEmoji(customEmojis.checkmark)
                 .setStyle(ButtonStyle.Danger);
 
             const cancelButton = new ButtonBuilder()
-                .setCustomId("cancel_user_cancel")
+                .setCustomId("abort_cancel_order")
                 .setLabel("Não, Manter")
-                .setEmoji(customEmojis.success)
                 .setStyle(ButtonStyle.Secondary);
 
             const row = new ActionRowBuilder().addComponents(confirmButton, cancelButton);
@@ -1035,7 +986,7 @@ client.on('interactionCreate', async (interaction) => {
             return interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
         }
 
-        else if (interaction.customId === "confirm_user_cancel") {
+        else if (interaction.customId === "confirm_cancel_order") {
             const channel = interaction.channel;
             if (!channel) return;
 
@@ -1046,43 +997,55 @@ client.on('interactionCreate', async (interaction) => {
                 m.embeds[0].title === "Nova Encomenda Recebida"
             );
             
-            let userId = interaction.user.id;
+            let orderOwnerId = null;
+            if (orderMessage) {
+                const userField = orderMessage.embeds[0].fields.find(f => f.name === "Usuário");
+                if (userField) {
+                    const match = userField.value.match(/\((\d+)\)$/);
+                    if (match) orderOwnerId = match[1];
+                }
+            }
+
+            const isSupport = interaction.member && interaction.member.roles.cache.has(config.supportRoleId);
+            const canceledBy = isSupport ? "Suporte" : "Cliente";
 
             const cancelEmbed = new EmbedBuilder()
-                .setTitle(`${customEmojis.error} Encomenda Cancelada pelo Cliente`)
-                .setDescription("Esta encomenda foi cancelada pelo próprio cliente.")
+                .setTitle(`${customEmojis.error} Encomenda Cancelada pelo ${canceledBy}`)
+                .setDescription(`Esta encomenda foi cancelada pelo ${canceledBy.toLowerCase()}.`)
                 .setColor(0xE74C3C)
                 .addFields(
-                    { name: "Cliente", value: `<@${userId}>`, inline: true },
+                    { name: isSupport ? "Staff" : "Cliente", value: `<@${interaction.user.id}>`, inline: true },
                     { name: "Data do Cancelamento", value: new Date().toLocaleString(), inline: true }
                 );
 
             await channel.send({ 
-                content: `<@&${config.supportRoleId}>`,
+                content: orderOwnerId ? `<@${orderOwnerId}> <@&${config.supportRoleId}>` : `<@&${config.supportRoleId}>`,
                 embeds: [cancelEmbed] 
             });
 
             await sendLogToChannel(config.closedOrdersLogChannel, {
-                title: "📦 Encomenda Cancelada pelo Cliente",
+                title: `📦 Encomenda Cancelada pelo ${canceledBy}`,
                 color: 0xE74C3C,
                 fields: [
                     { name: "Canal", value: channel.name, inline: true },
-                    { name: "Cliente", value: `<@${userId}>`, inline: true },
+                    { name: "Cancelado por", value: `${interaction.user.tag}`, inline: true },
                     { name: "Data", value: new Date().toLocaleString(), inline: false }
                 ]
             });
 
-            await interaction.update({ content: "Sua encomenda foi cancelada. O canal será excluído em breve.", components: [], embeds: [] });
+            await interaction.update({ content: "Encomenda cancelada. O canal será excluído em breve.", components: [], embeds: [] });
 
-            userActiveChannels.delete(userId);
+            if (orderOwnerId) {
+                userActiveChannels.delete(orderOwnerId);
+            }
             
             setTimeout(async () => {
                 await channel.delete().catch(console.error);
             }, 5000);
         }
 
-        else if (interaction.customId === "cancel_user_cancel") {
-            return interaction.update({ content: "Cancelamento da encomenda foi abortado.", components: [], embeds: [] });
+        else if (interaction.customId === "abort_cancel_order") {
+            return interaction.update({ content: "Cancelamento abortado.", components: [], embeds: [] });
         }
 
         else if (interaction.customId === "config_open_logs" || interaction.customId === "config_closed_logs") {
@@ -1231,21 +1194,14 @@ client.on('interactionCreate', async (interaction) => {
                     .setLabel("Em Andamento")
                     .setStyle(ButtonStyle.Primary);
                 const cancelButton = new ButtonBuilder()
-                    .setCustomId("status_cancel")
-                    .setLabel("Cancelar Encomenda (Suporte)")
+                    .setCustomId("cancel_order")
+                    .setLabel("Cancelar Encomenda")
                     .setStyle(ButtonStyle.Danger);
                 const completeButton = new ButtonBuilder()
                     .setCustomId("status_complete")
                     .setLabel("Finalizar Encomenda")
                     .setStyle(ButtonStyle.Success);
                 const statusRow = new ActionRowBuilder().addComponents(inProgressButton, cancelButton, completeButton);
-
-                const userCancelButton = new ButtonBuilder()
-                    .setCustomId("user_cancel_order")
-                    .setLabel("Cancelar Minha Encomenda")
-                    .setEmoji(customEmojis.error)
-                    .setStyle(ButtonStyle.Danger);
-                const userCancelRow = new ActionRowBuilder().addComponents(userCancelButton);
 
                 const opcoesButton = new ButtonBuilder()
                     .setCustomId("opcoes")
@@ -1265,7 +1221,7 @@ client.on('interactionCreate', async (interaction) => {
                 await channel.send({ 
                     content: `${customEmojis.bell} Nova encomenda criada! <@&${config.supportRoleId}> pode atender?`, 
                     embeds: [confirmEmbed],
-                    components: [statusRow, optionsRow, userCancelRow]
+                    components: [statusRow, optionsRow]
                 });
 
                 await sendLogToChannel(config.openOrdersLogChannel, {
