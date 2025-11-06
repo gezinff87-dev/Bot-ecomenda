@@ -43,11 +43,11 @@ let config = {
 };
 
 const customEmojis = {
-    error: "<a:TickRed:1435866005942566962>",
-    success: "<a:TickGreen:1435865654770274367>",
+    error: "❌",
+    success: "✅",
     money: "💰",
     card: "💳",
-    hourglass: "<a:loading:1435863836606468177>",
+    hourglass: "⏳",
     party: "🎉",
     package: "📦",
     settings: "⚙️",
@@ -168,7 +168,8 @@ client.on('messageCreate', async (message) => {
                 new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
                         .setCustomId("open_config_pix")
-                        .setLabel(`${customEmojis.settings} Configurar PIX`)
+                        .setLabel("Configurar PIX")
+                        .setEmoji(customEmojis.settings)
                         .setStyle(ButtonStyle.Primary)
                 )
             ]
@@ -224,12 +225,14 @@ client.on('messageCreate', async (message) => {
 
         const confirmButton = new ButtonBuilder()
             .setCustomId("confirm_close_channel")
-            .setLabel(`${customEmojis.checkmark} Confirmar`)
+            .setLabel("Confirmar")
+            .setEmoji(customEmojis.checkmark)
             .setStyle(ButtonStyle.Danger);
 
         const cancelButton = new ButtonBuilder()
             .setCustomId("cancel_close_channel")
-            .setLabel(`${customEmojis.error} Cancelar`)
+            .setLabel("Cancelar")
+            .setEmoji(customEmojis.error)
             .setStyle(ButtonStyle.Secondary);
 
         const row = new ActionRowBuilder().addComponents(confirmButton, cancelButton);
@@ -331,7 +334,8 @@ client.on('interactionCreate', async (interaction) => {
 
                 const payButton = new ButtonBuilder()
                     .setCustomId("pagar_encomenda")
-                    .setLabel(`${customEmojis.money} Pagar Encomenda`)
+                    .setLabel("Pagar Encomenda")
+                    .setEmoji(customEmojis.money)
                     .setStyle(ButtonStyle.Success);
                 
                 const payRow = new ActionRowBuilder().addComponents(payButton);
@@ -403,24 +407,27 @@ client.on('interactionCreate', async (interaction) => {
             
             const assumirButton = new ButtonBuilder()
                 .setCustomId("assumir_producao")
-                .setLabel(`${customEmojis.worker} Assumir Produção`)
+                .setLabel("Assumir Produção")
+                .setEmoji(customEmojis.worker)
                 .setStyle(ButtonStyle.Primary);
             const desistirButton = new ButtonBuilder()
                 .setCustomId("desistir_producao")
-                .setLabel(`${customEmojis.error} Desistir da Produção`)
+                .setLabel("Desistir da Produção")
+                .setEmoji(customEmojis.error)
                 .setStyle(ButtonStyle.Secondary);
             
             const notifyButton = new ButtonBuilder()
                 .setCustomId("notify_client")
-                .setLabel(`${customEmojis.bell} Notificar Cliente`)
+                .setLabel("Notificar Cliente")
+                .setEmoji(customEmojis.bell)
                 .setStyle(ButtonStyle.Success);
             const progressDecrease = new ButtonBuilder()
                 .setCustomId("progress_decrease")
-                .setLabel(`${customEmojis.arrowLeft}`)
+                .setEmoji(customEmojis.arrowLeft)
                 .setStyle(ButtonStyle.Secondary);
             const progressIncrease = new ButtonBuilder()
                 .setCustomId("progress_increase")
-                .setLabel(`${customEmojis.arrowRight}`)
+                .setEmoji(customEmojis.arrowRight)
                 .setStyle(ButtonStyle.Secondary);
             
             const optionsRow = new ActionRowBuilder().addComponents(assumirButton, desistirButton, notifyButton);
@@ -650,12 +657,14 @@ client.on('interactionCreate', async (interaction) => {
 
                     const confirmPaymentButton = new ButtonBuilder()
                         .setCustomId("confirmar_pagamento")
-                        .setLabel(`${customEmojis.success} Confirmar Pagamento`)
+                        .setLabel("Confirmar Pagamento")
+                        .setEmoji(customEmojis.success)
                         .setStyle(ButtonStyle.Success);
 
                     const rejectPaymentButton = new ButtonBuilder()
                         .setCustomId("rejeitar_pagamento")
-                        .setLabel(`${customEmojis.error} Rejeitar Pagamento`)
+                        .setLabel("Rejeitar Pagamento")
+                        .setEmoji(customEmojis.error)
                         .setStyle(ButtonStyle.Danger);
 
                     const confirmRow = new ActionRowBuilder().addComponents(confirmPaymentButton, rejectPaymentButton);
@@ -764,10 +773,16 @@ client.on('interactionCreate', async (interaction) => {
             }, 10000);
 
             if (userId) {
+                try {
+                    const user = await client.users.fetch(userId);
+                    await user.send(`${customEmojis.error} **Pagamento Rejeitado**\n\nSeu pagamento foi rejeitado pela equipe de suporte.\n\n**Motivo:** Comprovante inválido ou dados incorretos\n\n**Próximos Passos:** Realize o pagamento correto e envie um novo comprovante no canal de atendimento.`);
+                } catch (err) {
+                    console.error("Erro ao enviar DM para o usuário:", err);
+                }
                 channelPaymentStatus.set(channel.id, { status: 'awaiting_proof', userId: userId });
             }
 
-            return interaction.reply({ content: "Pagamento rejeitado. O cliente foi notificado.", ephemeral: true });
+            return interaction.reply({ content: "Pagamento rejeitado. O cliente foi notificado no canal e no PV.", ephemeral: true });
         }
 
         else if (interaction.customId === "confirm_close_channel") {
@@ -916,7 +931,8 @@ client.on('interactionCreate', async (interaction) => {
 
                 const updateStatusButton = new ButtonBuilder()
                     .setCustomId("update_status")
-                    .setLabel(`${customEmojis.pin} Atualizar Status`)
+                    .setLabel("Atualizar Status")
+                    .setEmoji(customEmojis.pin)
                     .setDisabled(true)
                     .setStyle(ButtonStyle.Secondary);
                 const optionsRow = new ActionRowBuilder().addComponents(opcoesButton, updateStatusButton);
