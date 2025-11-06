@@ -50,7 +50,7 @@ let config = {
 const customEmojis = {
     error: "<a:TickRed:1435866005942566962>",
     success: "<a:TickGreen:1435865654770274367>",
-    money: "<:robuxgif:1436104162575384668>",
+    money: "<:emoji_10:1436107051334897834>",
     card: "💳",
     hourglass: "<a:loading:1435863836606468177>",
     party: "<a:celebration1:1436054927179907106>",
@@ -801,7 +801,7 @@ client.on('interactionCreate', async (interaction) => {
             }
 
             const paymentEmbed = new EmbedBuilder()
-                .setTitle(`${customEmojis.money} Informações de Pagamento`)
+                .setTitle(`💰 Informações de Pagamento`)
                 .setDescription("Utilize a chave PIX abaixo para realizar o pagamento da sua encomenda:")
                 .setColor(0x00B894)
                 .addFields(
