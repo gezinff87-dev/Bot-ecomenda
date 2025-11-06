@@ -47,7 +47,7 @@ const customEmojis = {
     success: "✅",
     money: "💰",
     card: "💳",
-    hourglass: "⏳",
+    hourglass: "<a:loading:1435863836606468177>",
     party: "🎉",
     package: "📦",
     settings: "⚙️",
