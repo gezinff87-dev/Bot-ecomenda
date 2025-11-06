@@ -29,7 +29,7 @@ const client = new Client({
 });
 
 if (!process.env.DISCORD_TOKEN) {
-    console.error('ERRO: DISCORD_TOKEN nÃ£o configurado. Por favor, configure no arquivo .env');
+    console.error('ERRO: DISCORD_TOKEN não configurado. Por favor, configure no arquivo .env');
     process.exit(1);
 }
 
@@ -60,7 +60,7 @@ function saveConfig() {
         fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
         console.log('Configurações salvas no arquivo.');
     } catch (error) {
-        console.error('Erro ao salvar Configurações:', error);
+        console.error('Erro ao salvar configurações:', error);
     }
 }
 
@@ -110,8 +110,8 @@ client.on('messageCreate', async (message) => {
         
         const channels = guild.channels.cache.filter(ch => 
             ch.name.startsWith("📦-encomenda") ||
-            ch.name.startsWith("🔄-producao") ||
-            ch.name.startsWith("✅️-finalizado")
+            ch.name.startsWith("🟡-producao") ||
+            ch.name.startsWith("✅-finalizado")
         );
         
         if(channels.size === 0){
@@ -134,8 +134,8 @@ client.on('messageCreate', async (message) => {
         const currentPixKey = config.pixKey || "Nenhuma chave configurada";
         
         const pixEmbed = new EmbedBuilder()
-            .setTitle(" Configurações de Chave PIX")
-            .setDescription("Configure a chave PIX que sera exibida aos clientes no momento do pagamento.")
+            .setTitle("⚙️ Configuração de Chave PIX")
+            .setDescription("Configure a chave PIX que será exibida aos clientes no momento do pagamento.")
             .setColor(0x9B59B6)
             .addFields({ name: "Chave Atual", value: `\`${currentPixKey}\``, inline: false });
 
@@ -146,7 +146,7 @@ client.on('messageCreate', async (message) => {
                 new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
                         .setCustomId("open_config_pix")
-                        .setLabel("Configurar PIX")
+                        .setLabel("⚙️ Configurar PIX")
                         .setStyle(ButtonStyle.Primary)
                 )
             ]
@@ -159,7 +159,7 @@ client.on('interactionCreate', async (interaction) => {
         if (interaction.customId === "order_button") {
             const modal = new ModalBuilder()
                 .setCustomId("order_modal")
-                .setTitle("Formulario de Encomenda");
+                .setTitle("Formulário de Encomenda");
 
             const typeInput = new TextInputBuilder()
                 .setCustomId("orderType")
@@ -175,7 +175,7 @@ client.on('interactionCreate', async (interaction) => {
 
             const attachmentInput = new TextInputBuilder()
                 .setCustomId("orderAttachments")
-                .setLabel("Anexos (Códigos Promocionais)")
+                .setLabel("Anexos (links ou códigos, opcional)")
                 .setStyle(TextInputStyle.Short)
                 .setRequired(false);
 
@@ -205,7 +205,7 @@ client.on('interactionCreate', async (interaction) => {
             if (!channel || !channel.name) return;
 
             if (interaction.customId === "status_in_progress") {
-                const newName = channel.name.replace("📦-encomenda", "🔄-producao");
+                const newName = channel.name.replace("📦-encomenda", "🟡-producao");
                 await channel.setName(newName);
                 return interaction.reply({ content: "Status atualizado para Em Andamento.", ephemeral: true });
             } else if (interaction.customId === "status_complete") {
@@ -228,12 +228,12 @@ client.on('interactionCreate', async (interaction) => {
                     await orderMessage.delete().catch(console.error);
                 }
 
-                const newName = channel.name.replace(/📦-encomenda|🔄-producao)/, "✅️-finalizado");
+                const newName = channel.name.replace(/(📦-encomenda|🟡-producao)/, "✅-finalizado");
                 await channel.setName(newName);
 
                 const readyEmbed = new EmbedBuilder()
-                    .setTitle("✅️ Encomenda Pronta!")
-                    .setDescription(`Sua encomenda foi finalizada e esta pronta para entrega!`)
+                    .setTitle("✅ Encomenda Pronta!")
+                    .setDescription(`Sua encomenda foi finalizada e está pronta para entrega!`)
                     .setColor(0x2ECC71)
                     .addFields(
                         { name: "Status", value: "Concluída", inline: true },
@@ -242,7 +242,7 @@ client.on('interactionCreate', async (interaction) => {
 
                 const payButton = new ButtonBuilder()
                     .setCustomId("pagar_encomenda")
-                    .setLabel("🛒 Pagar Encomenda")
+                    .setLabel("💰 Pagar Encomenda")
                     .setStyle(ButtonStyle.Success);
                 
                 const payRow = new ActionRowBuilder().addComponents(payButton);
@@ -255,7 +255,7 @@ client.on('interactionCreate', async (interaction) => {
 
                 return interaction.reply({ content: "Encomenda finalizada com sucesso!", ephemeral: true });
             } else if (interaction.customId === "status_cancel") {
-                await interaction.reply({ content: "Encomenda cancelada. O canal sera excluído.", ephemeral: true });
+                await interaction.reply({ content: "Encomenda cancelada. O canal será excluído.", ephemeral: true });
                 return setTimeout(async () => {
                     await channel.delete().catch(console.error);
                 }, 3000);
@@ -274,11 +274,11 @@ client.on('interactionCreate', async (interaction) => {
             
             const assumirButton = new ButtonBuilder()
                 .setCustomId("assumir_producao")
-                .setLabel("👨‍💼 Assumir Produção")
+                .setLabel("👷 Assumir Produção")
                 .setStyle(ButtonStyle.Primary);
             const desistirButton = new ButtonBuilder()
                 .setCustomId("desistir_producao")
-                .setLabel("❌️ Desistir da Produção")
+                .setLabel("❌ Desistir da Produção")
                 .setStyle(ButtonStyle.Secondary);
             
             const notifyButton = new ButtonBuilder()
@@ -287,11 +287,11 @@ client.on('interactionCreate', async (interaction) => {
                 .setStyle(ButtonStyle.Success);
             const progressDecrease = new ButtonBuilder()
                 .setCustomId("progress_decrease")
-                .setLabel("➡️")
+                .setLabel("⬅")
                 .setStyle(ButtonStyle.Secondary);
             const progressIncrease = new ButtonBuilder()
                 .setCustomId("progress_increase")
-                .setLabel("⬅️")
+                .setLabel("➡")
                 .setStyle(ButtonStyle.Secondary);
             
             const optionsRow = new ActionRowBuilder().addComponents(assumirButton, desistirButton, notifyButton);
@@ -369,12 +369,12 @@ client.on('interactionCreate', async (interaction) => {
             if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
                 return interaction.reply({ content: "Você não tem permissão para utilizar esta opção.", ephemeral: true });
             }
-            return interaction.reply({ content: "Opção de Transferir Produto ativada. (off)", ephemeral: true });
+            return interaction.reply({ content: "Opção de Transferir Produção ativada. (Funcionalidade não implementada)", ephemeral: true });
         }
 
         else if (interaction.customId === "notify_client") {
             if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
-                return interaction.reply({ content: "Você não tem permissão £o para notificar o cliente.", ephemeral: true });
+                return interaction.reply({ content: "Você não tem permissão para notificar o cliente.", ephemeral: true });
             }
 
             const channel = interaction.channel;
@@ -403,7 +403,7 @@ client.on('interactionCreate', async (interaction) => {
                 await user.send("Olá, seu pedido recebeu uma atualização. Por favor, verifique no canal de atendimento.");
                 return interaction.reply({ content: "Cliente notificado com sucesso.", ephemeral: true });
             } catch (err) {
-                console.error("Erro ao enviar DM para o usuÃ¡rio:", err);
+                console.error("Erro ao enviar DM para o usuário:", err);
                 return interaction.reply({ content: "Falha ao notificar o cliente.", ephemeral: true });
             }
         }
@@ -486,18 +486,18 @@ client.on('interactionCreate', async (interaction) => {
         else if (interaction.customId === "pagar_encomenda") {
             if (!config.pixKey) {
                 return interaction.reply({ 
-                    content: "Chave PIX não configurada, O administrador precisa usar o comando `!configpix` primeiro.", 
+                    content: "❌ Chave PIX não configurada! O administrador precisa usar o comando `!configpix` primeiro.", 
                     ephemeral: true 
                 });
             }
 
             const paymentEmbed = new EmbedBuilder()
-                .setTitle("💸 Informações de Pagamento")
+                .setTitle("💰 Informações de Pagamento")
                 .setDescription("Utilize a chave PIX abaixo para realizar o pagamento da sua encomenda:")
                 .setColor(0x00B894)
                 .addFields(
                     { name: "Chave PIX", value: `\`\`\`${config.pixKey}\`\`\``, inline: false },
-                    { name: "InstruÃ§Ãµes", value: "Após realizar o pagamento, envie o comprovante neste canal para a confirmação e entrega.", inline: false }
+                    { name: "Instruções", value: "Após realizar o pagamento, envie o comprovante neste canal para confirmação.", inline: false }
                 )
                 .setFooter({ text: "Copie a chave PIX acima e use no app do seu banco" });
 
@@ -537,7 +537,7 @@ client.on('interactionCreate', async (interaction) => {
             }
             await orderMessage.edit({ embeds: [embed] });
 
-            const userField = embed.data.fields.find(f => f.name === "UsuÃ¡rio");
+            const userField = embed.data.fields.find(f => f.name === "Usuário");
             let userId = "";
             if (userField) {
                 const match = userField.value.match(/\((\d+)\)$/);
@@ -557,16 +557,16 @@ client.on('interactionCreate', async (interaction) => {
         if(interaction.customId === "order_modal"){
             const orderType = interaction.fields.getTextInputValue("orderType");
             const orderDescription = interaction.fields.getTextInputValue("orderDescription");
-            const orderAttachments = interaction.fields.getTextInputValue("orderAttachments") || "NÃ£o informado";
-            const orderDeadline = interaction.fields.getTextInputValue("orderDeadline") || "NÃ£o informado";
+            const orderAttachments = interaction.fields.getTextInputValue("orderAttachments") || "Não informado";
+            const orderDeadline = interaction.fields.getTextInputValue("orderDeadline") || "Não informado";
 
-            await interaction.reply({ content: "📦 Encomenda recebida! Criando um canal privado para seu atendimento...", ephemeral: true });
+            await interaction.reply({ content: "Encomenda recebida! Criando um canal privado para seu atendimento...", ephemeral: true });
 
             const guild = interaction.guild;
             if (!guild) return;
             
             const sanitizedUsername = sanitizeUsername(interaction.user.username);
-            const channelName = `ðŸ“¦-encomenda-${sanitizedUsername}`;
+            const channelName = `📦-encomenda-${sanitizedUsername}`;
             
             try {
                 const channel = await guild.channels.create({
@@ -622,18 +622,18 @@ client.on('interactionCreate', async (interaction) => {
 
                 const opcoesButton = new ButtonBuilder()
                     .setCustomId("opcoes")
-                    .setLabel("➕️ opções")
+                    .setLabel("➕ Opções")
                     .setStyle(ButtonStyle.Secondary);
 
                 const updateStatusButton = new ButtonBuilder()
                     .setCustomId("update_status")
-                    .setLabel("🕹 Atualizar Status")
+                    .setLabel("📍 Atualizar Status")
                     .setDisabled(true)
                     .setStyle(ButtonStyle.Secondary);
                 const optionsRow = new ActionRowBuilder().addComponents(opcoesButton, updateStatusButton);
                 
                 await channel.send({ 
-                    content: `Nova encomenda criada! <@&${config.supportRoleId}> pode atender?`, 
+                    content: `🔔 Nova encomenda criada! <@&${config.supportRoleId}> pode atender?`, 
                     embeds: [confirmEmbed],
                     components: [statusRow, optionsRow]
                 });
@@ -658,7 +658,7 @@ client.on('interactionCreate', async (interaction) => {
             saveConfig();
 
             const successEmbed = new EmbedBuilder()
-                .setTitle("Chave PIX Configurada")
+                .setTitle("✅ Chave PIX Configurada")
                 .setDescription("A chave PIX foi configurada com sucesso e salva permanentemente!")
                 .setColor(0x2ECC71)
                 .addFields(
@@ -675,7 +675,7 @@ function generateProgressBar(progress) {
     const totalBlocks = 10;
     const filledBlocks = Math.floor((progress / 100) * totalBlocks);
     const emptyBlocks = totalBlocks - filledBlocks;
-    return `[${"ðŸŸ©".repeat(filledBlocks)}${"â¬œ".repeat(emptyBlocks)}] ${progress}%`;
+    return `[${"🟩".repeat(filledBlocks)}${"⬜".repeat(emptyBlocks)}] ${progress}%`;
 }
 
 function updateProgressField(embed, progressBar, progress) {
@@ -708,6 +708,6 @@ client.login(TOKEN)
     });
 
 process.on('exit', (code) => {
-    console.log(`Processo encerrado como ${code}. Reiniciando...`);
+    console.log(`Processo encerrado com código ${code}. Reiniciando...`);
     client.login(TOKEN);
 });
