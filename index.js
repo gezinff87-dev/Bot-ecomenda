@@ -43,12 +43,12 @@ let config = {
 };
 
 const customEmojis = {
-    error: "❌",
-    success: "✅",
+    error: "<a:TickRed:1435866005942566962>",
+    success: "<a:TickGreen:1435865654770274367>",
     money: "💰",
     card: "💳",
-    hourglass: "⏳",
-    party: "🎉",
+    hourglass: "<a:loading:1435863836606468177>",
+    party: "<a:celebration1:1436054927179907106>",
     package: "📦",
     settings: "⚙️",
     worker: "👷",
@@ -404,6 +404,15 @@ client.on('interactionCreate', async (interaction) => {
                     embeds: [readyEmbed], 
                     components: [payRow] 
                 });
+
+                if (userIdValue) {
+                    try {
+                        const user = await client.users.fetch(userIdValue);
+                        await user.send(`${customEmojis.success} **Encomenda Pronta!**\n\nSua encomenda foi finalizada e está pronta para entrega!\n\n**Status:** Concluída\n**Data de Conclusão:** ${new Date().toLocaleString()}\n\nPor favor, acesse o canal de atendimento para efetuar o pagamento e receber seu produto.`);
+                    } catch (err) {
+                        console.error("Erro ao enviar DM para o usuário:", err);
+                    }
+                }
 
                 return interaction.reply({ content: "Encomenda finalizada com sucesso!", ephemeral: true });
             } else if (interaction.customId === "status_cancel") {
