@@ -52,7 +52,7 @@ const customEmojis = {
     package: "📦",
     settings: "⚙️",
     worker: "👷",
-    bell: "<:emoji_20\:1423707485629317332>",
+    bell: "<:emoji_20:1423707485629317332>",
     progressFilled: "🟩",
     progressEmpty: "⬜",
     pin: "📍",
