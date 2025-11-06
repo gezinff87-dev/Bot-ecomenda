@@ -1,16 +1,16 @@
 {
-  "name": "discord-bot-encomendas",
+  "name": "discord-encomendas-bot",
   "version": "1.0.0",
-  "description": "Bot Discord para sistema de encomendas",
-  "main": "bot.js",
+  "description": "Bot Discord para gerenciamento de encomendas com sistema de pagamento",
+  "main": "index.js",
   "scripts": {
-    "start": "node bot.js"
+    "start": "node index.js"
   },
   "keywords": ["discord", "bot", "encomendas"],
   "author": "",
-  "license": "MIT",
+  "license": "ISC",
   "dependencies": {
-    "discord.js": "^14.16.3",
+    "discord.js": "^14.14.1",
     "dotenv": "^16.3.1"
   }
 }
