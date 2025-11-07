@@ -65,7 +65,8 @@ const customEmojis = {
     checkmark: "✔️",
     arrowLeft: "⬅️",
     arrowRight: "➡️",
-    box: "<:emoji_10:1436107983875735643>"
+    box: "<:emoji_10:1436107983875735643>",
+    fab: "<:emoji_14:1436202894591397938>"
 };
 
 const channelPaymentStatus = new Map();
@@ -1253,8 +1254,8 @@ client.on('interactionCreate', async (interaction) => {
 
                 const inProgressButton = new ButtonBuilder()
                     .setCustomId("status_in_progress")
-                    .setLabel("<:emoji_14:1436202894591397938> Em Andamento")
-                    .setStyle(ButtonStyle.Primary);
+                    .setLabel("Em Andamento")
+                    .setEmoji(customEmojis.fab)                    .setStyle(ButtonStyle.Primary);
                 const cancelButton = new ButtonBuilder()
                     .setCustomId("cancel_order")
                     .setLabel("⛔️ Cancelar Encomenda")
