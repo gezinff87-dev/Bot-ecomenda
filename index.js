@@ -69,6 +69,7 @@ const customEmojis = {
 
 const channelPaymentStatus = new Map();
 const userActiveChannels = new Map();
+const orderValues = new Map();
 
 function loadConfig() {
     try {
@@ -462,65 +463,21 @@ client.on('interactionCreate', async (interaction) => {
                 await channel.setName(newName);
                 return interaction.reply({ content: "Status atualizado para Em Andamento.", ephemeral: true });
             } else if (interaction.customId === "status_complete") {
-                const messages = await channel.messages.fetch({ limit: 10 });
-                const orderMessage = messages.find(m => 
-                    m.author.id === client.user.id &&
-                    m.embeds.length > 0 &&
-                    m.embeds[0].title === "Nova Encomenda Recebida"
-                );
-                
-                let userName = "Cliente";
-                let userIdValue = null;
-                if (orderMessage) {
-                    const userField = orderMessage.embeds[0].fields.find(f => f.name === "Usuário");
-                    if (userField) {
-                        userName = userField.value.split(' ')[0];
-                        const match = userField.value.match(/\((\d+)\)$/);
-                        if (match) userIdValue = match[1];
-                    }
-                    await orderMessage.delete().catch(console.error);
-                }
+                const modal = new ModalBuilder()
+                    .setCustomId("finalize_order_modal")
+                    .setTitle("Finalizar Encomenda");
 
-                if (userIdValue) {
-                    channelPaymentStatus.set(channel.id, { status: 'order_complete', userId: userIdValue });
-                }
+                const valueInput = new TextInputBuilder()
+                    .setCustomId("order_value")
+                    .setLabel("Valor da Encomenda (R$)")
+                    .setPlaceholder("Ex: 50.00 ou 150")
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true);
 
-                const newName = channel.name.replace(/(📦-encomenda|🟡-producao)/, "✅-finalizado");
-                await channel.setName(newName);
+                const row = new ActionRowBuilder().addComponents(valueInput);
+                modal.addComponents(row);
 
-                const readyEmbed = new EmbedBuilder()
-                    .setTitle(`${customEmojis.success} Encomenda Pronta!`)
-                    .setDescription(`Sua encomenda foi finalizada e está pronta para entrega!`)
-                    .setColor(0x2ECC71)
-                    .addFields(
-                        { name: "Status", value: "Concluída", inline: true },
-                        { name: "Data de Conclusão", value: new Date().toLocaleString(), inline: true }
-                    );
-
-                const payButton = new ButtonBuilder()
-                    .setCustomId("pagar_encomenda")
-                    .setLabel("Pagar Encomenda")
-                    .setEmoji(customEmojis.money)
-                    .setStyle(ButtonStyle.Success);
-                
-                const payRow = new ActionRowBuilder().addComponents(payButton);
-
-                await channel.send({ 
-                    content: userIdValue ? `<@${userIdValue}>` : "@here",
-                    embeds: [readyEmbed], 
-                    components: [payRow] 
-                });
-
-                if (userIdValue) {
-                    try {
-                        const user = await client.users.fetch(userIdValue);
-                        await user.send(`${customEmojis.success} **Encomenda Pronta!**\n\nSua encomenda foi finalizada e está pronta para entrega!\n\n**Status:** Concluída\n**Data de Conclusão:** ${new Date().toLocaleString()}\n\nPor favor, acesse o canal de atendimento para efetuar o pagamento e receber seu produto.`);
-                    } catch (err) {
-                        console.error("Erro ao enviar DM para o usuário:", err);
-                    }
-                }
-
-                return interaction.reply({ content: "Encomenda finalizada com sucesso!", ephemeral: true });
+                return await interaction.showModal(modal);
             }
         }
 
@@ -800,11 +757,15 @@ client.on('interactionCreate', async (interaction) => {
                 });
             }
 
+            const channel = interaction.channel;
+            const orderValue = orderValues.get(channel.id) || "Não informado";
+
             const paymentEmbed = new EmbedBuilder()
                 .setTitle(`${customEmojis.card} Informações de Pagamento`)
                 .setDescription("Utilize a chave PIX abaixo para realizar o pagamento da sua encomenda:")
                 .setColor(0x00B894)
                 .addFields(
+                    { name: "Valor da Encomenda", value: `R$ ${orderValue}`, inline: false },
                     { name: "Chave PIX", value: `\`\`\`${config.pixKey}\`\`\``, inline: false },
                     { name: "Instruções", value: "Após realizar o pagamento, a confirmação será solicitada automaticamente à equipe de suporte.", inline: false }
                 )
@@ -818,7 +779,6 @@ client.on('interactionCreate', async (interaction) => {
                 console.error("Erro ao deletar mensagem do botão Pagar Encomenda:", error);
             }
 
-            const channel = interaction.channel;
             const userId = interaction.user.id;
 
             setTimeout(async () => {
@@ -1344,6 +1304,77 @@ client.on('interactionCreate', async (interaction) => {
             } catch (error) {
                 console.error("Erro ao criar o canal de encomenda:", error);
             }
+        }
+
+        else if(interaction.customId === "finalize_order_modal"){
+            if (!interaction.member || !interaction.member.roles.cache.has(config.supportRoleId)) {
+                return interaction.reply({ content: "Você não tem permissão para finalizar encomendas.", ephemeral: true });
+            }
+
+            const orderValue = interaction.fields.getTextInputValue("order_value").trim();
+            
+            const channel = interaction.channel;
+            if (!channel) return;
+
+            const messages = await channel.messages.fetch({ limit: 10 });
+            const orderMessage = messages.find(m => 
+                m.author.id === client.user.id &&
+                m.embeds.length > 0 &&
+                m.embeds[0].title === "Nova Encomenda Recebida"
+            );
+            
+            let userIdValue = null;
+            if (orderMessage) {
+                const userField = orderMessage.embeds[0].fields.find(f => f.name === "Usuário");
+                if (userField) {
+                    const match = userField.value.match(/\((\d+)\)$/);
+                    if (match) userIdValue = match[1];
+                }
+                await orderMessage.delete().catch(console.error);
+            }
+
+            if (userIdValue) {
+                channelPaymentStatus.set(channel.id, { status: 'order_complete', userId: userIdValue });
+                orderValues.set(channel.id, orderValue);
+            }
+
+            const newName = channel.name.replace(/(📦-encomenda|🟡-producao)/, "✅-finalizado");
+            await channel.setName(newName);
+
+            const readyEmbed = new EmbedBuilder()
+                .setTitle(`${customEmojis.success} Encomenda Pronta!`)
+                .setDescription(`Sua encomenda foi finalizada e está pronta para entrega!`)
+                .setColor(0x2ECC71)
+                .addFields(
+                    { name: "Status", value: "Concluída", inline: true },
+                    { name: "Valor", value: `R$ ${orderValue}`, inline: true },
+                    { name: "Data de Conclusão", value: new Date().toLocaleString(), inline: false }
+                );
+
+            const payButton = new ButtonBuilder()
+                .setCustomId("pagar_encomenda")
+                .setLabel("Pagar Encomenda")
+                .setEmoji(customEmojis.money)
+                .setStyle(ButtonStyle.Success);
+            
+            const payRow = new ActionRowBuilder().addComponents(payButton);
+
+            await channel.send({ 
+                content: userIdValue ? `<@${userIdValue}>` : "@here",
+                embeds: [readyEmbed], 
+                components: [payRow] 
+            });
+
+            if (userIdValue) {
+                try {
+                    const user = await client.users.fetch(userIdValue);
+                    await user.send(`${customEmojis.success} **Encomenda Pronta!**\n\nSua encomenda foi finalizada e está pronta para entrega!\n\n**Status:** Concluída\n**Valor:** R$ ${orderValue}\n**Data de Conclusão:** ${new Date().toLocaleString()}\n\nPor favor, acesse o canal de atendimento para efetuar o pagamento e receber seu produto.`);
+                } catch (err) {
+                    console.error("Erro ao enviar DM para o usuário:", err);
+                }
+            }
+
+            return interaction.reply({ content: `Encomenda finalizada com sucesso! Valor: R$ ${orderValue}`, ephemeral: true });
         }
 
         else if(interaction.customId === "config_pix_modal"){
