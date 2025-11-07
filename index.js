@@ -66,7 +66,9 @@ const customEmojis = {
     arrowLeft: "⬅️",
     arrowRight: "➡️",
     box: "<:emoji_10:1436107983875735643>",
-    fab: "<:emoji_14:1436202894591397938>"
+    fab: "<:emoji_14:1436202894591397938>",
+    x: "<:emoji_16:1436203715223617658>",
+    mais: "<:emoji_15:1436203682789199932>"
 };
 
 const channelPaymentStatus = new Map();
@@ -1258,8 +1260,8 @@ client.on('interactionCreate', async (interaction) => {
                     .setEmoji(customEmojis.fab)                    .setStyle(ButtonStyle.Primary);
                 const cancelButton = new ButtonBuilder()
                     .setCustomId("cancel_order")
-                    .setLabel("⛔️ Cancelar Encomenda")
-                    .setStyle(ButtonStyle.Danger);
+                    .setLabel("Cancelar Encomenda")
+                    .setEmoji(customEmojis.x)                    .setStyle(ButtonStyle.Danger);
                 const completeButton = new ButtonBuilder()
                     .setCustomId("status_complete")
                     .setLabel("Finalizar Encomenda")
@@ -1269,8 +1271,8 @@ client.on('interactionCreate', async (interaction) => {
 
                 const opcoesButton = new ButtonBuilder()
                     .setCustomId("opcoes")
-                    .setLabel("➕️ Opções")
-                    .setStyle(ButtonStyle.Secondary);
+                    .setLabel("Opções")
+                    .setEmoji(customEmojis.mais)                    .setStyle(ButtonStyle.Secondary);
 
                 const updateStatusButton = new ButtonBuilder()
                     .setCustomId("update_status")
