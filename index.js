@@ -65,6 +65,7 @@ const customEmojis = {
     checkmark: "✔️",
     arrowLeft: "⬅️",
     arrowRight: "➡️"
+    box: "<:emoji_10:1436107983875735643>",
 };
 
 const channelPaymentStatus = new Map();
@@ -1260,7 +1261,7 @@ client.on('interactionCreate', async (interaction) => {
                     .setStyle(ButtonStyle.Danger);
                 const completeButton = new ButtonBuilder()
                     .setCustomId("status_complete")
-                    .setLabel("<:emoji_10:1436107983875735643> Finalizar Encomenda")
+                    .setLabel("${customEmojis.box} Finalizar Encomenda")
                     .setStyle(ButtonStyle.Success);
                 const statusRow = new ActionRowBuilder().addComponents(inProgressButton, cancelButton, completeButton);
 
