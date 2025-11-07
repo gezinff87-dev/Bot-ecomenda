@@ -1252,7 +1252,7 @@ client.on('interactionCreate', async (interaction) => {
 
                 const inProgressButton = new ButtonBuilder()
                     .setCustomId("status_in_progress")
-                    .setLabel("🔁 Em Andamento")
+                    .setLabel("<:emoji_14:1436202894591397938> Em Andamento")
                     .setStyle(ButtonStyle.Primary);
                 const cancelButton = new ButtonBuilder()
                     .setCustomId("cancel_order")
@@ -1260,7 +1260,7 @@ client.on('interactionCreate', async (interaction) => {
                     .setStyle(ButtonStyle.Danger);
                 const completeButton = new ButtonBuilder()
                     .setCustomId("status_complete")
-                    .setLabel("📦 Finalizar Encomenda")
+                    .setLabel("<:emoji_10:1436107983875735643> Finalizar Encomenda")
                     .setStyle(ButtonStyle.Success);
                 const statusRow = new ActionRowBuilder().addComponents(inProgressButton, cancelButton, completeButton);
 
