@@ -810,7 +810,7 @@ client.on('interactionCreate', async (interaction) => {
                 )
                 .setFooter({ text: "Copie a chave PIX acima e use no app do seu banco" });
 
-            await interaction.reply({ embeds: [paymentEmbed], ephemeral: true });
+            await interaction.reply({ embeds: [paymentEmbed], ephemeral: false });
 
             try {
                 await interaction.message.delete();
