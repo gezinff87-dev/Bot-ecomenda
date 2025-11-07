@@ -65,7 +65,7 @@ const customEmojis = {
     checkmark: "✔️",
     arrowLeft: "⬅️",
     arrowRight: "➡️",
-    box: "<:emoji_10:1436107983875735643>",
+    box: "<:emoji_19:1436213061814849668>",
     fab: "<:emoji_17:1436209789213610136>",
     x: "<:emoji_16:1436203715223617658>",
     mais: "<:emoji_20:1436213078948839487>"
