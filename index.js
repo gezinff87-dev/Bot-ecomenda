@@ -795,7 +795,7 @@ client.on('interactionCreate', async (interaction) => {
         else if (interaction.customId === "pagar_encomenda") {
             if (!config.pixKey) {
                 return interaction.reply({ 
-                    content: `${customEmojis.error} Chave PIX não configurada! O administrador precisa usar o comando \`!configpix\` primeiro.`, 
+                    content: `${customEmojis.error} Chave PIX não configurada! O administrador precisa usar o comando \`/configpix\` primeiro.`, 
                     ephemeral: true 
                 });
             }
@@ -810,7 +810,13 @@ client.on('interactionCreate', async (interaction) => {
                 )
                 .setFooter({ text: "Copie a chave PIX acima e use no app do seu banco" });
 
-            await interaction.reply({ embeds: [paymentEmbed], ephemeral: false });
+            await interaction.reply({ embeds: [paymentEmbed], ephemeral: true });
+
+            try {
+                await interaction.message.delete();
+            } catch (error) {
+                console.error("Erro ao deletar mensagem do botão Pagar Encomenda:", error);
+            }
 
             const channel = interaction.channel;
             const userId = interaction.user.id;
