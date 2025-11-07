@@ -64,8 +64,8 @@ const customEmojis = {
     yellow: "🟡",
     checkmark: "✔️",
     arrowLeft: "⬅️",
-    arrowRight: "➡️"
-    box: "<:emoji_10:1436107983875735643>",
+    arrowRight: "➡️",
+    box: "<:emoji_10:1436107983875735643>"
 };
 
 const channelPaymentStatus = new Map();
