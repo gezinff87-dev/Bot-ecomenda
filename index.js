@@ -1252,21 +1252,21 @@ client.on('interactionCreate', async (interaction) => {
 
                 const inProgressButton = new ButtonBuilder()
                     .setCustomId("status_in_progress")
-                    .setLabel("Em Andamento")
+                    .setLabel("🔁 Em Andamento")
                     .setStyle(ButtonStyle.Primary);
                 const cancelButton = new ButtonBuilder()
                     .setCustomId("cancel_order")
-                    .setLabel("Cancelar Encomenda")
+                    .setLabel("⛔️ Cancelar Encomenda")
                     .setStyle(ButtonStyle.Danger);
                 const completeButton = new ButtonBuilder()
                     .setCustomId("status_complete")
-                    .setLabel("Finalizar Encomenda")
+                    .setLabel("📦 Finalizar Encomenda")
                     .setStyle(ButtonStyle.Success);
                 const statusRow = new ActionRowBuilder().addComponents(inProgressButton, cancelButton, completeButton);
 
                 const opcoesButton = new ButtonBuilder()
                     .setCustomId("opcoes")
-                    .setLabel("Opções")
+                    .setLabel("➕️ Opções")
                     .setStyle(ButtonStyle.Secondary);
 
                 const updateStatusButton = new ButtonBuilder()
