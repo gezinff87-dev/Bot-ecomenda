@@ -54,7 +54,7 @@ const customEmojis = {
     card: "<:emoji_11:1436113760971395102>",
     hourglass: "<a:loading:1435863836606468177>",
     party: "<a:celebration1:1436054927179907106>",
-    package: "<:ei_1755968898883removebgpreview:1408861559056371732>",
+    package: "<:emoji_12:1436173909253951600>",
     settings: "⚙️",
     worker: "👷",
     bell: "🔔",
