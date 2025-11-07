@@ -68,7 +68,7 @@ const customEmojis = {
     box: "<:emoji_10:1436107983875735643>",
     fab: "<:emoji_17:1436209789213610136>",
     x: "<:emoji_16:1436203715223617658>",
-    mais: "<:emoji_15:1436203682789199932>"
+    mais: "<:emoji_20:1436213078948839487>"
 };
 
 const channelPaymentStatus = new Map();
