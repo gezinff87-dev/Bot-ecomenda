@@ -1261,7 +1261,8 @@ client.on('interactionCreate', async (interaction) => {
                     .setStyle(ButtonStyle.Danger);
                 const completeButton = new ButtonBuilder()
                     .setCustomId("status_complete")
-                    .setLabel("${customEmojis.box} Finalizar Encomenda")
+                    .setLabel("Finalizar Encomenda")
+                    .setEmoji("${customEmojis.error}")
                     .setStyle(ButtonStyle.Success);
                 const statusRow = new ActionRowBuilder().addComponents(inProgressButton, cancelButton, completeButton);
 
