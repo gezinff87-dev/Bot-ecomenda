@@ -189,8 +189,11 @@ client.on('interactionCreate', async (interaction) => {
             }
 
             const orderEmbed = new EmbedBuilder()
-                .setTitle("Sistema de Encomendas")
-                .setDescription("Utilize este sistema para fazer sua encomenda. Clique em **Fazer Encomenda** para iniciar e preencha os dados necessários.")
+                .setTitle("Solicitar Produtos para Estoque")
+                .setDescription("**Como funciona?**\n' +
+    'Ao clicar no botão, você poderá descrever o produto que gostaria de ver disponível na loja. Sua solicitação será enviada para os administradores.\n\n' +
+    '**Atenção**\n' +
+    'Por favor, forneça detalhes claros sobre o produto desejado para facilitar a análise da equipe.")
                 .setColor(0x2ECC71);
 
             const orderButton = new ButtonBuilder()
