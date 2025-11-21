@@ -190,10 +190,7 @@ client.on('interactionCreate', async (interaction) => {
 
             const orderEmbed = new EmbedBuilder()
                 .setTitle("Solicitar Produtos para Estoque")
-                .setDescription("'**Como funciona?**\n' +
-    'Ao clicar no botão, você poderá descrever o produto que gostaria de ver disponível na loja. Sua solicitação será enviada para os administradores.\n\n' +
-    '**Atenção**\n' +
-    'Por favor, forneça detalhes claros sobre o produto desejado para facilitar a análise da equipe.'")
+                .setDescription("**Como funciona?**\nAo clicar no botão, você poderá descrever o produto que gostaria de ver disponível na loja. Sua solicitação será enviada para os administradores.\n\n**Atenção**\nPor favor, forneça detalhes claros sobre o produto desejado para facilitar a análise da equipe.")
                 .setColor(0x2ECC71);
 
             const orderButton = new ButtonBuilder()
