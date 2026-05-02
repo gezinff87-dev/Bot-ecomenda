@@ -16,7 +16,8 @@ const {
     StringSelectMenuBuilder,
     REST,
     Routes,
-    SlashCommandBuilder
+    SlashCommandBuilder,
+    MessageFlags
 } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -68,7 +69,8 @@ const customEmojis = {
     box: "<:emoji_20:1436214253265621004>",
     fab: "<:emoji_18:1436213039161544705>",
     x: "<:emoji_16:1436203715223617658>",
-    mais: "<:emoji_20:1436213078948839487>"
+    mais: "<:emoji_20:1436213078948839487>",
+    copiar: "📋"
 };
 
 const channelPaymentStatus = new Map();
@@ -764,18 +766,33 @@ client.on('interactionCreate', async (interaction) => {
             const channel = interaction.channel;
             const orderValue = orderValues.get(channel.id) || "Não informado";
 
+            // Embed com informações de pagamento (sem mostrar a chave PIX diretamente)
             const paymentEmbed = new EmbedBuilder()
                 .setTitle(`${customEmojis.card} Informações de Pagamento`)
-                .setDescription("Utilize a chave PIX abaixo para realizar o pagamento da sua encomenda:")
+                .setDescription("Clique no botão abaixo para copiar a chave PIX e realizar o pagamento da sua encomenda.")
                 .setColor(0x00B894)
                 .addFields(
                     { name: "Valor da Encomenda", value: `R$ ${orderValue}`, inline: false },
-                    { name: "Chave PIX", value: `\`\`\`${config.pixKey}\`\`\``, inline: false },
-                    { name: "Instruções", value: "Após realizar o pagamento, a confirmação será solicitada automaticamente à equipe de suporte.", inline: false }
+                    { name: "Instruções", value: "1. Clique no botão **Copiar PIX** abaixo\n2. A chave será mostrada apenas para você\n3. Use a chave no app do seu banco\n4. Após o pagamento, aguarde a confirmação", inline: false }
                 )
-                .setFooter({ text: "Copie a chave PIX acima e use no app do seu banco" });
+                .setFooter({ text: "A chave PIX é exibida apenas para você por segurança" });
 
-            await interaction.reply({ embeds: [paymentEmbed], ephemeral: false });
+            // Botão para copiar/mostrar a chave PIX
+            const copyPixButton = new ButtonBuilder()
+                .setCustomId("copiar_chave_pix")
+                .setLabel("Copiar PIX")
+                .setEmoji(customEmojis.copiar)
+                .setStyle(ButtonStyle.Success);
+
+            const cancelPaymentButton = new ButtonBuilder()
+                .setCustomId("cancelar_pagamento")
+                .setLabel("Cancelar")
+                .setEmoji(customEmojis.x)
+                .setStyle(ButtonStyle.Secondary);
+
+            const payRow = new ActionRowBuilder().addComponents(copyPixButton, cancelPaymentButton);
+
+            await interaction.reply({ embeds: [paymentEmbed], components: [payRow], ephemeral: false });
 
             try {
                 await interaction.message.delete();
@@ -785,6 +802,7 @@ client.on('interactionCreate', async (interaction) => {
 
             const userId = interaction.user.id;
 
+            // Enviar embed de confirmação de pagamento após 10 segundos
             setTimeout(async () => {
                 try {
                     const paymentConfirmEmbed = new EmbedBuilder()
@@ -821,6 +839,59 @@ client.on('interactionCreate', async (interaction) => {
                     console.error("Erro ao enviar embed de confirmação:", error);
                 }
             }, 10000);
+        }
+
+        // NOVO: Botão para copiar/mostrar a chave PIX (apenas para o usuário que clicou)
+        else if (interaction.customId === "copiar_chave_pix") {
+            if (!config.pixKey) {
+                return interaction.reply({ 
+                    content: `${customEmojis.error} Chave PIX não configurada! Contate um administrador.`, 
+                    ephemeral: true 
+                });
+            }
+
+            // Mostra a chave PIX apenas para o usuário que clicou (ephemeral: true)
+            const pixKeyEmbed = new EmbedBuilder()
+                .setTitle(`${customEmojis.money} Sua Chave PIX para Pagamento`)
+                .setDescription("Copie a chave PIX abaixo e use no app do seu banco:")
+                .setColor(0x00B894)
+                .addFields(
+                    { 
+                        name: "🔑 Chave PIX", 
+                        value: `\`\`\`${config.pixKey}\`\`\``, 
+                        inline: false 
+                    },
+                    { 
+                        name: "📋 Como copiar?", 
+                        value: "Toque e segure na chave acima para copiá-la automaticamente", 
+                        inline: false 
+                    }
+                )
+                .setFooter({ text: "⚠️ Esta chave é mostrada apenas para você" });
+
+            return interaction.reply({ 
+                embeds: [pixKeyEmbed], 
+                ephemeral: true 
+            });
+        }
+
+        // Botão para cancelar o pagamento
+        else if (interaction.customId === "cancelar_pagamento") {
+            const cancelEmbed = new EmbedBuilder()
+                .setTitle(`${customEmojis.error} Pagamento Cancelado`)
+                .setDescription("Você cancelou a visualização do pagamento. Se desejar pagar depois, solicite novamente ao suporte.")
+                .setColor(0xE74C3C);
+
+            // Atualiza a mensagem original removendo os botões
+            await interaction.message.edit({ 
+                embeds: [cancelEmbed], 
+                components: [] 
+            });
+
+            return interaction.reply({ 
+                content: "Pagamento cancelado com sucesso.", 
+                ephemeral: true 
+            });
         }
 
         else if (interaction.customId === "confirmar_pagamento") {
@@ -1257,11 +1328,13 @@ client.on('interactionCreate', async (interaction) => {
                 const inProgressButton = new ButtonBuilder()
                     .setCustomId("status_in_progress")
                     .setLabel("Em Andamento")
-                    .setEmoji(customEmojis.fab)                    .setStyle(ButtonStyle.Primary);
+                    .setEmoji(customEmojis.fab)
+                    .setStyle(ButtonStyle.Primary);
                 const cancelButton = new ButtonBuilder()
                     .setCustomId("cancel_order")
                     .setLabel("Cancelar Encomenda")
-                    .setEmoji(customEmojis.x)                    .setStyle(ButtonStyle.Danger);
+                    .setEmoji(customEmojis.x)
+                    .setStyle(ButtonStyle.Danger);
                 const completeButton = new ButtonBuilder()
                     .setCustomId("status_complete")
                     .setLabel("Finalizar Encomenda")
@@ -1272,7 +1345,8 @@ client.on('interactionCreate', async (interaction) => {
                 const opcoesButton = new ButtonBuilder()
                     .setCustomId("opcoes")
                     .setLabel("Opções")
-                    .setEmoji(customEmojis.mais)                    .setStyle(ButtonStyle.Secondary);
+                    .setEmoji(customEmojis.mais)
+                    .setStyle(ButtonStyle.Secondary);
 
                 const updateStatusButton = new ButtonBuilder()
                     .setCustomId("update_status")
