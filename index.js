@@ -40,8 +40,8 @@ const TOKEN = process.env.DISCORD_TOKEN;
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
 let config = {
-    orderCategoryId: "1417986273020219442",
-    supportRoleId: "1435758114002567258",
+    orderCategoryId: "1499245949069951099",
+    supportRoleId: "1499925488116695120",
     pixKey: null,
     openOrdersLogChannel: null,
     closedOrdersLogChannel: null
