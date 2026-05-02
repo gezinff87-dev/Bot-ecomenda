@@ -851,21 +851,8 @@ client.on('interactionCreate', async (interaction) => {
                 });
             }
 
-            const pixKeyEmbed = new EmbedBuilder()
-                .setTitle(`${customEmojis.money} Chave PIX para Pagamento`)
-                .setDescription("Copie a chave PIX abaixo e use no app do seu banco:")
-                .setColor(0x00B894)
-                .addFields(
-                    { 
-                        name: "🔑 Chave PIX", 
-                        value: `\`\`\`${config.pixKey}\`\`\``, 
-                        inline: false 
-                    }
-                )
-                .setFooter({ text: "⚠️ Esta chave é mostrada apenas para você" });
-
             return interaction.reply({ 
-                embeds: [pixKeyEmbed], 
+                content: `${config.pixKey}`, 
                 ephemeral: true 
             });
         }
