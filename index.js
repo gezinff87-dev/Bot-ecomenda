@@ -16,8 +16,7 @@ const {
     StringSelectMenuBuilder,
     REST,
     Routes,
-    SlashCommandBuilder,
-    MessageFlags
+    SlashCommandBuilder
 } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -628,7 +627,18 @@ client.on('interactionCreate', async (interaction) => {
             }
             try {
                 const user = await client.users.fetch(userId);
-                await user.send("Olá, seu pedido recebeu uma atualização. Por favor, verifique no canal de atendimento.");
+                
+                const notifyEmbed = new EmbedBuilder()
+                    .setTitle(`${customEmojis.bell} Atualização do Pedido`)
+                    .setDescription("Olá! Seu pedido recebeu uma atualização.")
+                    .setColor(0x3498DB)
+                    .addFields(
+                        { name: "Canal", value: `<#${channel.id}>`, inline: true },
+                        { name: "Status", value: "Verifique no canal de atendimento", inline: true }
+                    )
+                    .setFooter({ text: "Por favor, verifique no canal de atendimento para mais detalhes" });
+                
+                await user.send({ embeds: [notifyEmbed] });
                 return interaction.reply({ content: "Cliente notificado com sucesso.", ephemeral: true });
             } catch (err) {
                 console.error("Erro ao enviar DM para o usuário:", err);
@@ -766,31 +776,24 @@ client.on('interactionCreate', async (interaction) => {
             const channel = interaction.channel;
             const orderValue = orderValues.get(channel.id) || "Não informado";
 
-            // Embed com informações de pagamento (sem mostrar a chave PIX diretamente)
             const paymentEmbed = new EmbedBuilder()
                 .setTitle(`${customEmojis.card} Informações de Pagamento`)
-                .setDescription("Clique no botão abaixo para copiar a chave PIX e realizar o pagamento da sua encomenda.")
+                .setDescription("Utilize a chave PIX abaixo para realizar o pagamento da sua encomenda:")
                 .setColor(0x00B894)
                 .addFields(
                     { name: "Valor da Encomenda", value: `R$ ${orderValue}`, inline: false },
-                    { name: "Instruções", value: "1. Clique no botão **Copiar PIX** abaixo\n2. A chave será mostrada apenas para você\n3. Use a chave no app do seu banco\n4. Após o pagamento, aguarde a confirmação", inline: false }
+                    { name: "Chave PIX", value: `\`\`\`${config.pixKey}\`\`\``, inline: false },
+                    { name: "Instruções", value: "Após realizar o pagamento, a confirmação será solicitada automaticamente à equipe de suporte.", inline: false }
                 )
-                .setFooter({ text: "A chave PIX é exibida apenas para você por segurança" });
+                .setFooter({ text: "Copie a chave PIX acima e use no app do seu banco" });
 
-            // Botão para copiar/mostrar a chave PIX
             const copyPixButton = new ButtonBuilder()
                 .setCustomId("copiar_chave_pix")
                 .setLabel("Copiar PIX")
                 .setEmoji(customEmojis.copiar)
                 .setStyle(ButtonStyle.Success);
 
-            const cancelPaymentButton = new ButtonBuilder()
-                .setCustomId("cancelar_pagamento")
-                .setLabel("Cancelar")
-                .setEmoji(customEmojis.x)
-                .setStyle(ButtonStyle.Secondary);
-
-            const payRow = new ActionRowBuilder().addComponents(copyPixButton, cancelPaymentButton);
+            const payRow = new ActionRowBuilder().addComponents(copyPixButton);
 
             await interaction.reply({ embeds: [paymentEmbed], components: [payRow], ephemeral: false });
 
@@ -802,7 +805,6 @@ client.on('interactionCreate', async (interaction) => {
 
             const userId = interaction.user.id;
 
-            // Enviar embed de confirmação de pagamento após 10 segundos
             setTimeout(async () => {
                 try {
                     const paymentConfirmEmbed = new EmbedBuilder()
@@ -841,7 +843,6 @@ client.on('interactionCreate', async (interaction) => {
             }, 10000);
         }
 
-        // NOVO: Botão para copiar/mostrar a chave PIX (apenas para o usuário que clicou)
         else if (interaction.customId === "copiar_chave_pix") {
             if (!config.pixKey) {
                 return interaction.reply({ 
@@ -850,9 +851,8 @@ client.on('interactionCreate', async (interaction) => {
                 });
             }
 
-            // Mostra a chave PIX apenas para o usuário que clicou (ephemeral: true)
             const pixKeyEmbed = new EmbedBuilder()
-                .setTitle(`${customEmojis.money} Sua Chave PIX para Pagamento`)
+                .setTitle(`${customEmojis.money} Chave PIX para Pagamento`)
                 .setDescription("Copie a chave PIX abaixo e use no app do seu banco:")
                 .setColor(0x00B894)
                 .addFields(
@@ -860,36 +860,12 @@ client.on('interactionCreate', async (interaction) => {
                         name: "🔑 Chave PIX", 
                         value: `\`\`\`${config.pixKey}\`\`\``, 
                         inline: false 
-                    },
-                    { 
-                        name: "📋 Como copiar?", 
-                        value: "Toque e segure na chave acima para copiá-la automaticamente", 
-                        inline: false 
                     }
                 )
                 .setFooter({ text: "⚠️ Esta chave é mostrada apenas para você" });
 
             return interaction.reply({ 
                 embeds: [pixKeyEmbed], 
-                ephemeral: true 
-            });
-        }
-
-        // Botão para cancelar o pagamento
-        else if (interaction.customId === "cancelar_pagamento") {
-            const cancelEmbed = new EmbedBuilder()
-                .setTitle(`${customEmojis.error} Pagamento Cancelado`)
-                .setDescription("Você cancelou a visualização do pagamento. Se desejar pagar depois, solicite novamente ao suporte.")
-                .setColor(0xE74C3C);
-
-            // Atualiza a mensagem original removendo os botões
-            await interaction.message.edit({ 
-                embeds: [cancelEmbed], 
-                components: [] 
-            });
-
-            return interaction.reply({ 
-                content: "Pagamento cancelado com sucesso.", 
                 ephemeral: true 
             });
         }
@@ -941,22 +917,18 @@ client.on('interactionCreate', async (interaction) => {
                     try {
                         const user = await client.users.fetch(userId);
                         
-                        const htmlTranscript = await generateHTMLTranscript(channel);
+                        const dmEmbed = new EmbedBuilder()
+                            .setTitle(`${customEmojis.success} Compra Aprovada!`)
+                            .setDescription(`Seu pagamento foi confirmado com sucesso! ${customEmojis.party}`)
+                            .setColor(0x2ECC71)
+                            .addFields(
+                                { name: "Canal", value: `<#${channel.id}>`, inline: true },
+                                { name: "Status", value: "Pagamento Confirmado", inline: true },
+                                { name: "Próximo Passo", value: "Aguardando Entrega", inline: false }
+                            )
+                            .setFooter({ text: "Aguarde a entrega do produto no canal de atendimento ou no seu PV" });
                         
-                        if (htmlTranscript) {
-                            const buffer = Buffer.from(htmlTranscript, 'utf-8');
-                            const attachment = {
-                                attachment: buffer,
-                                name: `transcricao-${channel.name}-${Date.now()}.html`
-                            };
-                            
-                            await user.send({
-                                content: `${customEmojis.success} **Compra Aprovada!** Seu pagamento foi confirmado. Aguarde a entrega do produto.\n\nAqui está a transcrição completa do atendimento em HTML:`,
-                                files: [attachment]
-                            });
-                        } else {
-                            await user.send(`${customEmojis.success} **Compra Aprovada!** Seu pagamento foi confirmado. Aguarde a entrega do produto neste canal ou no seu PV.`);
-                        }
+                        await user.send({ embeds: [dmEmbed] });
                     } catch (err) {
                         console.error("Erro ao enviar DM para o usuário:", err);
                     }
@@ -964,7 +936,7 @@ client.on('interactionCreate', async (interaction) => {
 
                 channelPaymentStatus.set(channel.id, { status: 'payment_confirmed', userId: userId });
 
-                await interaction.editReply({ content: `${customEmojis.success} Pagamento confirmado com sucesso! Todas as mensagens anteriores foram removidas e transcrição enviada ao cliente.` });
+                await interaction.editReply({ content: `${customEmojis.success} Pagamento confirmado com sucesso!` });
 
             } catch (error) {
                 console.error("Erro ao confirmar pagamento:", error);
@@ -1005,7 +977,18 @@ client.on('interactionCreate', async (interaction) => {
             if (userId) {
                 try {
                     const user = await client.users.fetch(userId);
-                    await user.send(`${customEmojis.error} **Pagamento Rejeitado**\n\nSeu pagamento foi rejeitado pela equipe de suporte.\n\n**Motivo:** Comprovante inválido ou dados incorretos\n\n**Próximos Passos:** Realize o pagamento correto e envie um novo comprovante no canal de atendimento.`);
+                    
+                    const dmRejectEmbed = new EmbedBuilder()
+                        .setTitle(`${customEmojis.error} Pagamento Rejeitado`)
+                        .setDescription("Seu pagamento foi rejeitado pela equipe de suporte.")
+                        .setColor(0xE74C3C)
+                        .addFields(
+                            { name: "Motivo", value: "Comprovante inválido ou dados incorretos", inline: false },
+                            { name: "Próximos Passos", value: "Realize o pagamento correto e envie um novo comprovante no canal de atendimento.", inline: false }
+                        )
+                        .setFooter({ text: "Por favor, verifique os dados e tente novamente" });
+                    
+                    await user.send({ embeds: [dmRejectEmbed] });
                 } catch (err) {
                     console.error("Erro ao enviar DM para o usuário:", err);
                 }
@@ -1169,7 +1152,18 @@ client.on('interactionCreate', async (interaction) => {
                 
                 try {
                     const user = await client.users.fetch(orderOwnerId);
-                    await user.send(`${customEmojis.error} **Encomenda Cancelada**\n\nSua encomenda foi cancelada pelo ${canceledBy.toLowerCase()}.\n\n**Cancelado por:** ${interaction.user.tag}\n**Data:** ${new Date().toLocaleString()}\n\nO canal de atendimento será excluído em breve.`);
+                    
+                    const dmCancelEmbed = new EmbedBuilder()
+                        .setTitle(`${customEmojis.error} Encomenda Cancelada`)
+                        .setDescription(`Sua encomenda foi cancelada pelo ${canceledBy.toLowerCase()}.`)
+                        .setColor(0xE74C3C)
+                        .addFields(
+                            { name: "Cancelado por", value: interaction.user.tag, inline: true },
+                            { name: "Data", value: new Date().toLocaleString(), inline: true }
+                        )
+                        .setFooter({ text: "O canal de atendimento será excluído em breve" });
+                    
+                    await user.send({ embeds: [dmCancelEmbed] });
                 } catch (err) {
                     console.error("Não foi possível enviar DM para o usuário sobre o cancelamento:", err);
                 }
@@ -1248,7 +1242,14 @@ client.on('interactionCreate', async (interaction) => {
             }
             try {
                 const user = await client.users.fetch(userId);
-                await user.send(`Seu pedido foi atualizado: ${statusMessage}`);
+                
+                const statusDmEmbed = new EmbedBuilder()
+                    .setTitle(`${customEmojis.pin} Atualização de Status`)
+                    .setDescription(`Seu pedido foi atualizado: **${statusMessage}**`)
+                    .setColor(0x3498DB)
+                    .setFooter({ text: "Verifique o canal de atendimento para mais detalhes" });
+                
+                await user.send({ embeds: [statusDmEmbed] });
             } catch (err) {
                 console.error("Não foi possível enviar DM para o usuário.", err);
             }
@@ -1376,7 +1377,18 @@ client.on('interactionCreate', async (interaction) => {
                 });
                 
                 try {
-                    await interaction.user.send(`Sua encomenda foi criada com sucesso: ${channel.name}`);
+                    const dmCreateEmbed = new EmbedBuilder()
+                        .setTitle(`${customEmojis.success} Encomenda Criada com Sucesso!`)
+                        .setDescription(`Sua encomenda foi criada e está sendo processada.`)
+                        .setColor(0x2ECC71)
+                        .addFields(
+                            { name: "Canal", value: `<#${channel.id}>`, inline: true },
+                            { name: "Tipo", value: orderType, inline: true },
+                            { name: "Status", value: "Aguardando atendimento", inline: false }
+                        )
+                        .setFooter({ text: "Acompanhe o andamento no canal de atendimento" });
+                    
+                    await interaction.user.send({ embeds: [dmCreateEmbed] });
                 } catch (err) {
                     console.error("Não foi possível enviar DM para o usuário.", err);
                 }
@@ -1447,7 +1459,19 @@ client.on('interactionCreate', async (interaction) => {
             if (userIdValue) {
                 try {
                     const user = await client.users.fetch(userIdValue);
-                    await user.send(`${customEmojis.success} **Encomenda Pronta!**\n\nSua encomenda foi finalizada e está pronta para entrega!\n\n**Status:** Concluída\n**Valor:** R$ ${orderValue}\n**Data de Conclusão:** ${new Date().toLocaleString()}\n\nPor favor, acesse o canal de atendimento para efetuar o pagamento e receber seu produto.`);
+                    
+                    const dmReadyEmbed = new EmbedBuilder()
+                        .setTitle(`${customEmojis.success} Encomenda Pronta!`)
+                        .setDescription(`Sua encomenda foi finalizada e está pronta para entrega!`)
+                        .setColor(0x2ECC71)
+                        .addFields(
+                            { name: "Status", value: "Concluída", inline: true },
+                            { name: "Valor", value: `R$ ${orderValue}`, inline: true },
+                            { name: "Data de Conclusão", value: new Date().toLocaleString(), inline: false }
+                        )
+                        .setFooter({ text: "Acesse o canal de atendimento para efetuar o pagamento e receber seu produto" });
+                    
+                    await user.send({ embeds: [dmReadyEmbed] });
                 } catch (err) {
                     console.error("Erro ao enviar DM para o usuário:", err);
                 }
@@ -1576,119 +1600,6 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 });
-
-async function generateHTMLTranscript(channel) {
-    try {
-        const messages = await channel.messages.fetch({ limit: 100 });
-        const sortedMessages = messages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
-
-        let html = `
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transcrição - ${channel.name}</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #36393f;
-            color: #dcddde;
-            padding: 20px;
-            margin: 0;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: #2f3136;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        }
-        h1 {
-            color: #ffffff;
-            border-bottom: 2px solid #7289da;
-            padding-bottom: 10px;
-        }
-        .message {
-            margin: 15px 0;
-            padding: 10px;
-            background-color: #40444b;
-            border-radius: 5px;
-            border-left: 3px solid #7289da;
-        }
-        .message-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        .author {
-            font-weight: bold;
-            color: #7289da;
-            margin-right: 10px;
-        }
-        .timestamp {
-            font-size: 0.75em;
-            color: #72767d;
-        }
-        .content {
-            color: #dcddde;
-            word-wrap: break-word;
-        }
-        .embed-info {
-            color: #99aab5;
-            font-style: italic;
-        }
-        .footer {
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid #40444b;
-            text-align: center;
-            color: #72767d;
-            font-size: 0.9em;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>📋 Transcrição do Canal: ${channel.name}</h1>
-        <p><strong>Total de mensagens:</strong> ${sortedMessages.size}</p>
-        <p><strong>Data de geração:</strong> ${new Date().toLocaleString('pt-BR')}</p>
-        <hr>
-`;
-
-        sortedMessages.forEach(msg => {
-            const timestamp = msg.createdAt.toLocaleString('pt-BR');
-            const author = msg.author.tag;
-            const content = msg.content || (msg.embeds.length > 0 ? '[Embed/Conteúdo Rico]' : '[Anexo/Mídia]');
-            
-            html += `
-        <div class="message">
-            <div class="message-header">
-                <span class="author">${author}</span>
-                <span class="timestamp">${timestamp}</span>
-            </div>
-            <div class="content">${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-        </div>
-`;
-        });
-
-        html += `
-        <div class="footer">
-            <p>Transcrição gerada automaticamente pelo sistema de encomendas</p>
-            <p>© ${new Date().getFullYear()} - Todos os direitos reservados</p>
-        </div>
-    </div>
-</body>
-</html>
-`;
-
-        return html;
-    } catch (error) {
-        console.error("Erro ao gerar transcrição HTML:", error);
-        return null;
-    }
-}
 
 async function sendLogToChannel(channelId, orderData) {
     if (!channelId) return;
