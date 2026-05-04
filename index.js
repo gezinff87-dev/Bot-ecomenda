@@ -826,8 +826,8 @@ client.on('interactionCreate', async (interaction) => {
 
                     const rejectPaymentButton = new ButtonBuilder()
                         .setCustomId("rejeitar_pagamento")
-                        .setLabel("Rejeitar Pagamento")
-                        .setEmoji(customEmojis.error)
+                        .setLabel("Regeitar pagamento")
+                        .setEmoji(<:emoji_8:1500907380165054605>)
                         .setStyle(ButtonStyle.Danger);
 
                     const confirmRow = new ActionRowBuilder().addComponents(confirmPaymentButton, rejectPaymentButton);
@@ -890,7 +890,7 @@ client.on('interactionCreate', async (interaction) => {
                     .setColor(0x2ECC71)
                     .addFields(
                         { name: "Status", value: `${customEmojis.success} Pagamento Confirmado`, inline: true },
-                        { name: "Próximo Passo", value: `<:emoji_6:1500905624035266621> Aguardando Entrega`, inline: true },
+                        { name: "Próximo Passo", value: `<:emoji_7:1500906787589591101> Aguardando Entrega`, inline: true },
                         { name: "Data de Aprovação", value: new Date().toLocaleString(), inline: false }
                     )
                     .setFooter({ text: "Você será notificado assim que o produto for entregue" });
