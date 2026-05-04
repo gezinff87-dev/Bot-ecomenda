@@ -827,7 +827,7 @@ client.on('interactionCreate', async (interaction) => {
                     const rejectPaymentButton = new ButtonBuilder()
                         .setCustomId("rejeitar_pagamento")
                         .setLabel("Regeitar pagamento")
-                        .setEmoji(<:emoji_8:1500907380165054605>)
+                        .setEmoji('<:emoji_8:1500907380165054605>')
                         .setStyle(ButtonStyle.Danger);
 
                     const confirmRow = new ActionRowBuilder().addComponents(confirmPaymentButton, rejectPaymentButton);
