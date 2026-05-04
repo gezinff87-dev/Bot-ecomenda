@@ -49,7 +49,7 @@ let config = {
 
 const customEmojis = {
     error: "<a:TickRed:1435866005942566962>",
-    success: "<:yes:1380081854887235655>",
+    success: "<:emoji_1:1500897528084697139>",
     money: "<:k0111:1410699501425131540>",
     card: "<:emoji_11:1436113760971395102>",
     hourglass: "<a:load:1468104199622623244>",
