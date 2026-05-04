@@ -48,7 +48,7 @@ let config = {
 };
 
 const customEmojis = {
-    error: "<a:TickRed:1435866005942566962>",
+    error: "🚫",
     success: "<:emoji_1:1500897528084697139>",
     money: "<:k0111:1410699501425131540>",
     card: "<:emoji_11:1436113760971395102>",
@@ -777,7 +777,7 @@ client.on('interactionCreate', async (interaction) => {
             const orderValue = orderValues.get(channel.id) || "Não informado";
 
             const paymentEmbed = new EmbedBuilder()
-                .setTitle(`${customEmojis.card} Informações de Pagamento`)
+                .setTitle(`<:emoji_2:1500902429640622140> Informações de Pagamento`)
                 .setDescription("Utilize a chave PIX abaixo para realizar o pagamento da sua encomenda:")
                 .setColor(0x00B894)
                 .addFields(
@@ -808,7 +808,7 @@ client.on('interactionCreate', async (interaction) => {
             setTimeout(async () => {
                 try {
                     const paymentConfirmEmbed = new EmbedBuilder()
-                        .setTitle(`${customEmojis.card} Aguardando Confirmação de Pagamento`)
+                        .setTitle(`<:emoji_5:1500902520044781668> Aguardando Confirmação de Pagamento`)
                         .setDescription("O cliente solicitou o pagamento. Por favor, confirme quando o pagamento for verificado.")
                         .setColor(0xF39C12)
                         .addFields(
