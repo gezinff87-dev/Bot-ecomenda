@@ -49,10 +49,10 @@ let config = {
 
 const customEmojis = {
     error: "<a:TickRed:1435866005942566962>",
-    success: "<a:TickGreen:1435865654770274367>",
+    success: "<:yes:1380081854887235655>",
     money: "<:k0111:1410699501425131540>",
     card: "<:emoji_11:1436113760971395102>",
-    hourglass: "<a:loading:1435863836606468177>",
+    hourglass: "<a:load:1468104199622623244>",
     party: "<a:celebration1:1436054927179907106>",
     package: "<:emoji_12:1436173909253951600>",
     settings: "<:emoji_13:1436175594479026308>",
