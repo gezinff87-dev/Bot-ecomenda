@@ -886,11 +886,11 @@ client.on('interactionCreate', async (interaction) => {
 
                 const deliveryEmbed = new EmbedBuilder()
                     .setTitle(`${customEmojis.success} Compra Aprovada!`)
-                    .setDescription(`**Parabéns!** Seu pagamento foi confirmado com sucesso.\n\n${customEmojis.party} Aguarde a entrega do produto neste canal ou no seu PV (mensagem privada).`)
+                    .setDescription(`**Parabéns!** Seu pagamento foi confirmado com sucesso.\n\n<:emoji_3:1500902476864290967> Aguarde a entrega do produto neste canal ou no seu PV (mensagem privada).`)
                     .setColor(0x2ECC71)
                     .addFields(
                         { name: "Status", value: `${customEmojis.success} Pagamento Confirmado`, inline: true },
-                        { name: "Próximo Passo", value: `${customEmojis.package} Aguardando Entrega`, inline: true },
+                        { name: "Próximo Passo", value: `<:emoji_6:1500905624035266621> Aguardando Entrega`, inline: true },
                         { name: "Data de Aprovação", value: new Date().toLocaleString(), inline: false }
                     )
                     .setFooter({ text: "Você será notificado assim que o produto for entregue" });
